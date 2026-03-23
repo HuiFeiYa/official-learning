@@ -1,7 +1,4 @@
 {
-    // 使用 IntelliSense 了解相关属性。 
-    // 悬停以查看现有属性的描述。
-    // 欲了解更多信息，请访问: https://go.microsoft.com/fwlink/?linkid=830387
     "version": "0.2.0",
     "configurations": [
 
@@ -9,7 +6,46 @@
             "type": "node",
             "name": "process - argv",
             "request": "launch",
-            "program": "${workspaceFolder}\\projects\\nodejs\\process\\argv.mjs"
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\process\\argv.js",
+            "args": [
+                "-arg",
+                "123",
+                "456",
+                "789"
+            ]
         },
+        {
+            "type": "node",
+            "name": "path - resolve",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\path\\resolve.js",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        },
+        {
+             "type": "node",
+            "name": "path - join",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\path\\join.js",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        },
+        {
+             "type": "node",
+            "name": "process - cwd",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\process\\cwd.js",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        }
     ]
 }
