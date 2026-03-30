@@ -26,6 +26,12 @@
             ]
         },
         {
+            "type": "node",
+            "name": "path - base",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\path\\base.js"
+        },
+        {
              "type": "node",
             "name": "path - join",
             "request": "launch",
