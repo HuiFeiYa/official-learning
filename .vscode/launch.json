@@ -91,6 +91,18 @@
             "name": "ES - import.meta",
             "request": "launch",
             "program": "${workspaceFolder}\\projects\\js\\ES\\es.mjs"
+        },
+        {
+             "type": "node",
+            "name": "fs - buffer",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\buffer\\sync.js"
+        },
+        {
+             "type": "node",
+            "name": "fs - buffer sync-1",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\buffer\\sync-1.js"
         }
     ]
 }
