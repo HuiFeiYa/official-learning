@@ -86,5 +86,11 @@
                 "file.js"
             ]
         },
+        {
+             "type": "node",
+            "name": "ES - import.meta",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\js\\ES\\es.mjs"
+        }
     ]
 }
