@@ -46,6 +46,39 @@
                 "utils",
                 "file.js"
             ]
-        }
+        },
+        {
+             "type": "node",
+            "name": "child_process - exec",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\child_process\\BasicUsage.js",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        },
+        {
+             "type": "node",
+            "name": "child_process - fork",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\child_process\\parent.cjs",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        },
+        {
+             "type": "node",
+            "name": "child_process - spawn",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\child_process\\spawn\\main.js",
+            "args": [
+                "src",
+                "utils",
+                "file.js"
+            ]
+        },
     ]
 }
