@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>前端内存泄漏实验室</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f0f2f5; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; color: #333; }
+        .scenario { background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); border-left: 5px solid #ccc; }
+        .scenario.leak { border-left-color: #ff4d4f; }
+        .scenario.safe { border-left-color: #52c41a; }
+        
+        h3 { margin-top: 0; display: flex; justify-content: space-between; align-items: center; }
+        .desc { color: #666; font-size: 0.9em; margin-bottom: 15px; }
+        .code-block { background: #282c34; color: #abb2bf; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 0.85em; overflow-x: auto; margin-bottom: 15px; }
+        
+        button { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .btn-leak { background: #ff4d4f; color: white; }
+        .btn-leak:hover { background: #ff7875; }
+        .btn-clean { background: #52c41a; color: white; }
+        .btn-clean:hover { background: #73d13d; }
+        .btn-check { background: #1890ff; color: white; }
+        
+        .status { margin-top: 10px; font-size: 0.9em; font-weight: bold; }
+        .status.active { color: #ff4d4f; }
+        .status.cleaned { color: #52c41a; }
+        
+        /* 用于模拟大数据 */
+        .hidden-data { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🧪 前端内存泄漏实验室</h1>
+    <p style="text-align: center; color: #666;">
+        操作步骤：点击“触发泄漏” -> 点击多次 -> 点击“强制 GC” -> 拍摄快照 -> 分析未释放的对象。
+    </p>
+
+    <!-- 场景 1: 分离的 DOM (Detached DOM) -->
+    <div class="scenario leak" id="scene1">
+        <h3>1. 分离的 DOM 节点 (Detached DOM) <span id="s1-count">0</span></h3>
+        <div class="desc">
+            <strong>原理：</strong>创建了大量 DOM 元素，移除出文档树后，仍然用全局数组持有它们的引用。
+            <br><strong>现象：</strong>Heap Snapshot 中出现大量 <code>Detached HTMLDivElement</code>。
+        </div>
+        <div class="code-block">// 全局变量意外持有了已移除的 DOM
+const detachedNodes = []; 
+
+function createLeak() {
+    const div = document.createElement('div');
+    div.innerHTML = 'I am a leaked node ' + Math.random();
+    // 模拟复杂结构
+    for(let i=0; i<100; i++) {
+        div.appendChild(document.createElement('span'));
+    }
+    document.body.appendChild(div);
+    
+    // 移除 DOM
+    document.body.removeChild(div);
+    
+    // ❌ 错误：虽然移除了，但数组还引用着它！
+    detachedNodes.push(div); 
+}
+function cleanLeak() {
+    // ✅ 正确：清空数组引用
+    detachedNodes.length = 0; 
+}</div>
+        <button class="btn-leak" onclick="runScene1()">🔴 触发泄漏 (添加 50 个节点)</button>
+        <button class="btn-clean" onclick="cleanScene1()">🟢 清理引用</button>
+        <div class="status" id="s1-status">状态：正常</div>
+    </div>
+
+    <!-- 场景 2: 遗忘的定时器 (Forgotten Timers) -->
+    <div class="scenario leak" id="scene2">
+        <h3>2. 遗忘的定时器 (Timers) <span id="s2-count">0</span></h3>
+        <div class="desc">
+            <strong>原理：</strong>创建了 <code>setInterval</code>，组件/逻辑销毁时未清除。回调函数闭包持有了大对象。
+            <br><strong>现象：</strong>即使页面不动，内存也在涨。Snapshot 中看到 <code>Closure</code> 和 <code>Array</code>。
+        </div>
+        <div class="code-block">let timers = [];
+const bigData = new Array(10000).fill('Memory Hog');
+
+function createLeak() {
+    const id = setInterval(() => {
+        // ❌ 闭包持有了 bigData，且定时器永不停止
+        console.log('Running...', bigData.length); 
+    }, 1000);
+    timers.push(id);
+}
+function cleanLeak() {
+    // ✅ 正确：清除所有定时器
+    timers.forEach(clearInterval);
+    timers = [];
+}</div>
+        <button class="btn-leak" onclick="runScene2()">🔴 触发泄漏 (启动 10 个定时器)</button>
+        <button class="btn-clean" onclick="cleanScene2()">🟢 停止定时器</button>
+        <div class="status" id="s2-status">状态：正常</div>
+    </div>
+
+    <!-- 场景 3: 全局事件监听器 (Global Event Listeners) -->
+    <div class="scenario leak" id="scene3">
+        <h3>3. 未清理的事件监听器 (Event Listeners) <span id="s3-count">0</span></h3>
+        <div class="desc">
+            <strong>原理：</strong>给 <code>window</code> 或 <code>document</code> 绑定事件，回调函数引用了局部大对象，且未解绑。
+            <br><strong>现象：</strong>Snapshot 中看到 <code>Window</code> 指向大量的 <code>Closure</code>。
+        </div>
+        <div class="code-block">let listeners = [];
+
+function createLeak() {
+    const hugeObject = new Array(5000).fill({ data: 'Leak' });
+    
+    const handler = () => {
+        // ❌ handler 闭包持有了 hugeObject
+        // 只要 window 还在，handler 就在，hugeObject 就无法回收
+        return hugeObject.length; 
+    };
+    
+    window.addEventListener('resize', handler);
+    listeners.push(handler); // 只是为了计数，实际泄漏是因为 addEventListener
+}
+function cleanLeak() {
+    // ❌ 常见错误：只清空数组，没调用 removeEventListener!
+    // listeners = []; 
+    
+    // ✅ 正确做法需要保存 handler 引用并移除 (这里演示正确做法)
+    // 注意：为了演示泄漏，上面的 createLeak 没有保存匿名函数的引用供移除
+    // 这里的 clean 实际上无法完全清理上面的匿名函数，除非我们在 createLeak 时保存了引用
+    // *修正演示*：我们将使用可移除的方式演示“忘记移除”的后果
+    alert("提示：此场景演示的是‘忘记调用 removeEventListener’。\n由于上面创建的是匿名函数且未保存引用，即使点击清理也无法移除旧的监听器（这就是泄漏！）。\n请点击触发多次，然后看 Snapshot 中的 Window Retainers。");
+}</div>
+        <button class="btn-leak" onclick="runScene3()">🔴 触发泄漏 (绑定 20 个监听器)</button>
+        <button class="btn-clean" onclick="cleanScene3()">🟢 尝试清理 (其实清不掉)</button>
+        <div class="status" id="s3-status">状态：正常</div>
+    </div>
+
+    <!-- 场景 4: 闭包与大数组 (Closures with Large Data) -->
+    <div class="scenario leak" id="scene4">
+        <h3>4. 意外的闭包引用 (Heavy Closures) <span id="s4-count">0</span></h3>
+        <div class="desc">
+            <strong>原理：</strong>在一个大作用域内定义小函数，并将小函数暴露给全局。小函数只用了小变量，但闭包锁住了整个大作用域。
+            <br><strong>现象：</strong>一个小的 <code>Function</code> 对象，Retainers 显示它持有一个巨大的 <code>Array</code>。
+        </div>
+        <div class="code-block">const globalCallbacks = [];
+
+function createLeak() {
+    // 模拟一个巨大的局部数据
+    const massiveData = new Array(20000).fill('Secret Data');
+    
+    // 定义一个小回调，只用到了 count
+    let count = 0;
+    const smallCallback = () => {
+        count++;
+        return count;
+    };
+    
+    // ❌ 错误：将回调放入全局数组
+    // 虽然 smallCallback 只用 count，但它所在的闭包环境持有了 massiveData
+    globalCallbacks.push(smallCallback);
+}
+function cleanLeak() {
+    // ✅ 正确：清空全局引用
+    globalCallbacks.length = 0;
+}</div>
+        <button class="btn-leak" onclick="runScene4()">🔴 触发泄漏 (创建 10 个大闭包)</button>
+        <button class="btn-clean" onclick="cleanScene4()">🟢 清理全局引用</button>
+        <div class="status" id="s4-status">状态：正常</div>
+    </div>
+
+    <!-- 场景 5: 缓存无限增长 (Unbounded Cache) -->
+    <div class="scenario leak" id="scene5">
+        <h3>5. 无限增长的全局缓存 (Unbounded Cache) <span id="s5-count">0</span></h3>
+        <div class="desc">
+            <strong>原理：</strong>使用全局 Map/Object 做缓存，只存不删，或者键值对生成策略有问题（如用时间戳做 Key）。
+            <br><strong>现象：</strong>全局 <code>Map</code> 或 <code>Object</code> 体积无限膨胀。
+        </div>
+        <div class="code-block">const cache = new Map();
+
+function createLeak() {
+    // 模拟生成唯一的 Key (如时间戳 + 随机数)
+    const key = Date.now() + '-' + Math.random();
+    const value = new Array(5000).fill('Cached Item');
+    
+    // ❌ 错误：永远不清理旧缓存
+    cache.set(key, value);
+}
+function cleanLeak() {
+    // ✅ 正确：限制缓存大小或清空
+    cache.clear();
+    // 或者实现 LRU 算法
+}</div>
+        <button class="btn-leak" onclick="runScene5()">🔴 触发泄漏 (填充 100 条缓存)</button>
+        <button class="btn-clean" onclick="cleanScene5()">🟢 清空缓存</button>
+        <div class="status" id="s5-status">状态：正常</div>
+    </div>
+
+    <div style="text-align: center; margin-top: 30px;">
+        <button class="btn-check" onclick="forceGC()" style="font-size: 1.2em; padding: 12px 24px;">🗑️ 强制垃圾回收 (Force GC)</button>
+        <p style="font-size: 0.8em; color: #999;">注意：需要在 DevTools Settings -> Preferences -> Enable "Show heap snapshot object allocation" 并确保能访问 performance 接口。<br>如果按钮无效，请手动点击 DevTools Memory 面板的垃圾桶图标。</p>
+    </div>
+</div>
+
+<script>
+    // 辅助函数：更新计数
+    function updateCount(id, val) {
+        document.getElementById(id).innerText = val;
+    }
+    function updateStatus(id, isLeaking) {
+        const el = document.getElementById(id);
+        if(isLeaking) {
+            el.innerText = "状态：⚠️ 内存泄漏中 (对象被持有)";
+            el.className = "status active";
+        } else {
+            el.innerText = "状态：✅ 已清理 (等待 GC)";
+            el.className = "status cleaned";
+        }
+    }
+
+    // --- 场景 1 实现 ---
+    const s1_nodes = [];
+    let s1_count = 0;
+    function runScene1() {
+        for(let i=0; i<50; i++) {
+            const div = document.createElement('div');
+            div.innerHTML = '<span>'.repeat(50) + 'Leak Node ' + i + '</span>'.repeat(50);
+            document.body.appendChild(div);
+
+            document.body.removeChild(div);
+                // ✅ 关键：把 div 所有内容也一起保留，不让 GC 回收
+        div._cache = div.innerHTML; // 新增这一行！
+            s1_nodes.push(div); // 泄漏点
+        }
+        s1_count += 50;
+        updateCount('s1-count', s1_count);
+        updateStatus('s1-status', true);
+    }
+    function cleanScene1() {
+        s1_nodes.length = 0;
+        updateStatus('s1-status', false);
+    }
+
+    // --- 场景 2 实现 ---
+    const s2_timers = [];
+    const s2_bigData = new Array(10000).fill('Memory Hog');
+    let s2_count = 0;
+    function runScene2() {
+        for(let i=0; i<10; i++) {
+            const id = setInterval(() => {
+                // 闭包引用 s2_bigData
+                void s2_bigData.length; 
+            }, 1000);
+            s2_timers.push(id);
+        }
+        s2_count += 10;
+        updateCount('s2-count', s2_count);
+        updateStatus('s2-status', true);
+    }
+    function cleanScene2() {
+        s2_timers.forEach(clearInterval);
+        s2_timers.length = 0;
+        updateStatus('s2-status', false);
+    }
+
+    // --- 场景 3 实现 ---
+    // 为了演示无法清理，我们故意不保存匿名函数的引用供外部移除
+    // 实际上，一旦绑定，如果没有保存 handler 引用，就再也移除了
+    let s3_count = 0;
+    function runScene3() {
+        for(let i=0; i<20; i++) {
+            const hugeObject = new Array(5000).fill({ data: 'Leak' });
+            window.addEventListener('resize', () => {
+                void hugeObject.length;
+            });
+        }
+        s3_count += 20;
+        updateCount('s3-count', s3_count);
+        updateStatus('s3-status', true);
+    }
+    function cleanScene3() {
+        alert("演示说明：\n因为上面绑定的是匿名函数且没有保存到变量中，我们无法调用 removeEventListener。\n这些监听器将永久驻留在 Window 对象上，直到页面刷新。\n这就是为什么推荐将事件处理函数命名或使用 useRef 保存的原因。");
+        // 实际上无法清理
+    }
+
+    // --- 场景 4 实现 ---
+    const s4_callbacks = [];
+    let s4_count = 0;
+    function runScene4() {
+        for(let i=0; i<10; i++) {
+            const massiveData = new Array(200000).fill('Secret Data');
+            let count = 0;
+            s4_callbacks.push(massiveData); // 泄漏点：闭包持有 massiveData
+        }
+        s4_count += 10;
+        // updateCount('s4-count', s4_count);
+        // updateStatus('s4-status', true);
+    }
+    function cleanScene4() {
+        s4_callbacks.length = 0;
+        updateStatus('s4-status', false);
+    }
+
+    // --- 场景 5 实现 ---
+    const s5_cache = new Map();
+    let s5_count = 0;
+    function runScene5() {
+        for(let i=0; i<100; i++) {
+            const key = Date.now() + '-' + Math.random();
+            const value = new Array(5000).fill('Cached Item');
+            s5_cache.set(key, value);
+        }
+        s5_count += 100;
+        updateCount('s5-count', s5_count);
+        updateStatus('s5-status', true);
+    }
+    function cleanScene5() {
+        s5_cache.clear();
+        updateStatus('s5-status', false);
+    }
+
+    // --- 强制 GC ---
+    function forceGC() {
+        if (window.gc) {
+            window.gc();
+            alert("已触发 window.gc()。\n请切换到 Memory 面板查看效果。");
+        } else {
+            alert("当前环境不支持直接调用 window.gc()。\n\n请在 Chrome DevTools 中操作：\n1. 打开 DevTools (F12)\n2. 按 Ctrl+Shift+P (Mac: Cmd+Shift+P)\n3. 输入 'Collect garbage' 并回车。\n\n或者直接在 Memory 面板点击垃圾桶图标。");
+        }
+    }
+</script>
+
+</body>
+</html>

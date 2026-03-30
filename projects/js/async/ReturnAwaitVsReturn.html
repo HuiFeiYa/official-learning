@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN">
+<meta charset="utf-8" />
+<title>return await vs return（浏览器对比）</title>
+<style>
+  body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "PingFang SC", "Microsoft YaHei", sans-serif; padding: 20px; line-height: 1.6; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 12px; }
+  .panel { border: 1px solid #dcdcdc; border-radius: 8px; padding: 12px; }
+  .title { font-weight: 600; margin-bottom: 8px; }
+  pre { background: #f8f8f8; padding: 10px; border-radius: 6px; height: 240px; overflow: auto; margin: 0; }
+  button { margin-right: 8px; padding: 6px 12px; }
+  .tips { color: #444; }
+</style>
+<body>
+  <h1>return await 与 return 的差异</h1>
+  <p class="tips">点击按钮运行对比，观察输出顺序与错误捕获差异。</p>
+
+  <div class="row">
+    <div class="panel">
+      <div class="title">差异一：try/catch 捕获</div>
+      <button id="btn1">运行</button>
+      <pre id="out1"></pre>
+    </div>
+    <div class="panel">
+      <div class="title">差异二：finally 执行时机</div>
+      <button id="btn2">运行</button>
+      <pre id="out2"></pre>
+    </div>
+  </div>
+
+  <script>
+    function append(el, ...parts) { el.textContent += parts.join(' ') + '\n' }
+    function ts() {
+      const d = new Date();
+      return d.toLocaleTimeString() + '.' + String(d.getMilliseconds()).padStart(3, '0');
+    }
+    function resolveLater(val, ms) { return new Promise(r => setTimeout(() => r(val), ms)) }
+    function rejectLater(reason, ms) { return new Promise((_, r) => setTimeout(() => r(new Error(reason)), ms)) }
+
+    document.getElementById('btn1').onclick = async () => {
+      const out = document.getElementById('out1'); out.textContent = '';
+      async function withAwait() {
+        try {
+          append(out, ts(), 'withAwait: start');
+          return await rejectLater('boom');
+        } catch (e) {
+          append(out, ts(), 'withAwait: 函数内部捕获到错误 ->', e.message);
+          throw e;
+        }
+      }
+      async function withoutAwait() {
+        try {
+          append(out, ts(), 'withoutAwait: start');
+          return rejectLater('boom');
+        } catch (e) {
+          append(out, ts(), 'withoutAwait: 函数内部捕获到错误 ->', e.message);
+          throw e;
+        }
+      }
+      await withAwait().then(
+        () => append(out, ts(), 'withAwait: 调用方 then'),
+        err => append(out, ts(), 'withAwait: 调用方 catch ->', err.message),
+      );
+      await withoutAwait().then(
+        () => append(out, ts(), 'withoutAwait: 调用方 then'),
+        err => append(out, ts(), 'withoutAwait: 调用方 catch ->', err.message),
+      );
+    };
+
+    document.getElementById('btn2').onclick = async () => {
+      const out = document.getElementById('out2'); out.textContent = '';
+      const p1 = resolveLater('ok-1', 200);
+      const p2 = resolveLater('ok-2', 200);
+
+      async function withAwaitFinally(p) {
+        try {
+          append(out, ts(), 'withAwaitFinally: 即将等待');
+          return await p;
+        } finally {
+          append(out, ts(), 'withAwaitFinally: finally 执行（在等待完成之后）');
+        }
+      }
+      async function withoutAwaitFinally(p) {
+        try {
+          append(out, ts(), 'withoutAwaitFinally: 直接返回 Promise');
+          return p;
+        } finally {
+          append(out, ts(), 'withoutAwaitFinally: finally 立即执行（不等待 Promise 完成）');
+        }
+      }
+
+      await Promise.all([
+        withAwaitFinally(p1).then(v => append(out, ts(), 'withAwaitFinally: 调用方收到 ->', v)),
+        withoutAwaitFinally(p2).then(v => append(out, ts(), 'withoutAwaitFinally: 调用方收到 ->', v)),
+      ]);
+    };
+  </script>
+</body>
+</html>
+
