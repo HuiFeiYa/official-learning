@@ -109,6 +109,18 @@
             "name": "fs - buffer async-1",
             "request": "launch",
             "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\buffer\\async-1.js"
+        },
+        {
+             "type": "node",
+            "name": "fs - stream async",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\stream\\async.js"
+        },
+        {
+             "type": "node",
+            "name": "fs - cp",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\cp\\index.js"
         }
     ]
 }
