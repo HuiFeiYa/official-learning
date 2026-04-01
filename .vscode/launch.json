@@ -121,6 +121,12 @@
             "name": "fs - cp",
             "request": "launch",
             "program": "${workspaceFolder}\\projects\\nodejs\\src\\fs\\cp\\index.js"
+        },
+        {
+             "type": "node",
+            "name": "http - index",
+            "request": "launch",
+            "program": "${workspaceFolder}\\projects\\nodejs\\src\\http\\index.cjs"
         }
     ]
 }
