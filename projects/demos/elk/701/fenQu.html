@@ -92,7 +92,11 @@
       layoutOptions: {
         "elk.algorithm": "layered",
         "elk.direction": "DOWN",
-        "elk.spacing.nodeNode": 50
+        "elk.spacing.nodeNode": 50,
+        "elk.alignment": "CENTER",
+        "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+        "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+        "elk.portConstraints": "FIXED_SIDE"
       },
       children: [
         { id: "L1", width: 100, height: 40 },
@@ -102,8 +106,8 @@
           width: 120,
           height: 60,
           ports: [
-            { id: "L3_in", width: 15, height: 10 },
-            { id: "L3_out", width: 10, height: 10 }
+            { id: "L3_in", width: 15, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "L3_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         }
       ],
@@ -120,7 +124,11 @@
       layoutOptions: {
         "elk.algorithm": "layered",
         "elk.direction": "DOWN",
-        "elk.spacing.nodeNode": 50
+        "elk.spacing.nodeNode": 50,
+        "elk.alignment": "CENTER",
+        "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+        "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+        "elk.portConstraints": "FIXED_SIDE"
       },
       children: [
         { id: "R1", width: 100, height: 40 },
@@ -131,8 +139,8 @@
           width: 110,
           height: 45,
           ports: [
-            { id: "R4_in", width: 12, height: 10 },
-            { id: "R4_out", width: 12, height: 10 }
+            { id: "R4_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "R4_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         }
       ],
@@ -151,7 +159,11 @@
         "elk.algorithm": "layered",
         "elk.direction": "DOWN",
         "elk.spacing.nodeNode": 60,  // 更大的节点间距
-        "elk.layered.spacing.nodeNodeBetweenLayers": 80  // 层间距更大
+        "elk.layered.spacing.nodeNodeBetweenLayers": 80,  // 层间距更大
+        "elk.alignment": "CENTER",
+        "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+        "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+        "elk.portConstraints": "FIXED_SIDE"
       },
       children: [
         // 第一层：输入层
@@ -160,7 +172,7 @@
           width: 140, 
           height: 50,
           ports: [
-            { id: "C_In1_out", width: 12, height: 10 }
+            { id: "C_In1_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         },
         { 
@@ -168,7 +180,7 @@
           width: 140, 
           height: 50,
           ports: [
-            { id: "C_In2_out", width: 12, height: 10 }
+            { id: "C_In2_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         },
         // 第二层：处理层
@@ -177,9 +189,9 @@
           width: 160, 
           height: 55,
           ports: [
-            { id: "C_P1_in1", width: 12, height: 10 },
-            { id: "C_P1_in2", width: 12, height: 10 },
-            { id: "C_P1_out", width: 12, height: 10 }
+            { id: "C_P1_in1", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "C_P1_in2", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "C_P1_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         },
         { 
@@ -187,9 +199,9 @@
           width: 160, 
           height: 55,
           ports: [
-            { id: "C_P2_in", width: 12, height: 10 },
-            { id: "C_P2_out1", width: 12, height: 10 },
-            { id: "C_P2_out2", width: 12, height: 10 }
+            { id: "C_P2_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "C_P2_out1", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } },
+            { id: "C_P2_out2", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         },
         // 第三层：聚合层
@@ -198,9 +210,9 @@
           width: 180, 
           height: 60,
           ports: [
-            { id: "C_Agg_in1", width: 12, height: 10 },
-            { id: "C_Agg_in2", width: 12, height: 10 },
-            { id: "C_Agg_out", width: 12, height: 10 }
+            { id: "C_Agg_in1", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "C_Agg_in2", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
+            { id: "C_Agg_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
           ]
         },
         // 第四层：输出层
@@ -209,7 +221,7 @@
           width: 140, 
           height: 50,
           ports: [
-            { id: "C_Out1_in", width: 12, height: 10 }
+            { id: "C_Out1_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } }
           ]
         },
         { 
@@ -217,7 +229,7 @@
           width: 140, 
           height: 50,
           ports: [
-            { id: "C_Out2_in", width: 12, height: 10 }
+            { id: "C_Out2_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } }
           ]
         }
       ],
@@ -259,12 +271,16 @@
       
       // 1. 计算三个分区的实际宽度
       const calculateZoneWidth = (result) => {
-        let maxX = 0;
+        let minX = Infinity;
+        let maxX = -Infinity;
         result.children.forEach(n => {
+          if (n.x < minX) minX = n.x;
           const nodeRightEdge = n.x + n.width;
           if (nodeRightEdge > maxX) maxX = nodeRightEdge;
         });
-        return maxX + PADDING * 2;
+        // 记录 minX 供后续渲染使用
+        result.minX = minX === Infinity ? 0 : minX;
+        return (maxX - minX) + PADDING * 2;
       };
       
       const leftZoneWidth = calculateZoneWidth(leftResult);
@@ -279,12 +295,16 @@
       const maxZoneWidth = Math.max(leftZoneWidth, rightZoneWidth);
       
       // 3. 计算各分区的偏移量
-      // 左分区：居左
-      const leftOffsetX = PADDING;
-      // 中间分区：在左分区右侧，留出间距
-      const centerOffsetX = leftOffsetX + leftZoneWidth + PADDING * 2;
-      // 右分区：与左分区对称
-      const rightOffsetX = centerOffsetX + centerZoneWidth + PADDING * 2;
+      // 左分区：居左且在 maxZoneWidth 内水平居中
+      const leftContentOffset = (maxZoneWidth - leftZoneWidth) / 2;
+      const leftOffsetX = PADDING + leftContentOffset - leftResult.minX;
+      
+      // 中间分区：在左分区占用的 maxZoneWidth 空间右侧
+      const centerOffsetX = (PADDING + maxZoneWidth + PADDING * 2) - centerResult.minX;
+      
+      // 右分区：在中间分区右侧，且在自己的 maxZoneWidth 内水平居中
+      const rightContentOffset = (maxZoneWidth - rightZoneWidth) / 2;
+      const rightOffsetX = (centerOffsetX + centerResult.minX + centerZoneWidth + PADDING * 2) + rightContentOffset - rightResult.minX;
       
       console.log(`左分区偏移: ${leftOffsetX}`);
       console.log(`中间分区偏移: ${centerOffsetX}`);
@@ -315,22 +335,22 @@
       });
       
       // 7. 添加分隔线
-      // 左-中分隔线
+      // 左-中分隔线（基于 maxZoneWidth）
       const divider1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      divider1.setAttribute('x1', leftOffsetX + leftZoneWidth);
+      divider1.setAttribute('x1', PADDING + maxZoneWidth + PADDING);
       divider1.setAttribute('y1', 0);
-      divider1.setAttribute('x2', leftOffsetX + leftZoneWidth);
+      divider1.setAttribute('x2', PADDING + maxZoneWidth + PADDING);
       divider1.setAttribute('y2', 1000);
       divider1.setAttribute('stroke', '#999');
       divider1.setAttribute('stroke-width', '2');
       divider1.setAttribute('stroke-dasharray', '10,5');
       svg.appendChild(divider1);
       
-      // 中-右分隔线
+      // 中-右分隔线（基于 centerZoneWidth）
       const divider2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      divider2.setAttribute('x1', centerOffsetX + centerZoneWidth);
+      divider2.setAttribute('x1', centerOffsetX + centerResult.minX + centerZoneWidth + PADDING);
       divider2.setAttribute('y1', 0);
-      divider2.setAttribute('x2', centerOffsetX + centerZoneWidth);
+      divider2.setAttribute('x2', centerOffsetX + centerResult.minX + centerZoneWidth + PADDING);
       divider2.setAttribute('y2', 1000);
       divider2.setAttribute('stroke', '#999');
       divider2.setAttribute('stroke-width', '2');
@@ -349,7 +369,7 @@
       });
       
       const totalHeight = maxZoneHeight + PADDING * 2; // 加上上下padding
-      const totalWidth = rightOffsetX + rightZoneWidth;
+      const totalWidth = rightOffsetX + rightResult.minX + rightZoneWidth + PADDING;
       
       svg.setAttribute('width', totalWidth);
       svg.setAttribute('height', totalHeight);
