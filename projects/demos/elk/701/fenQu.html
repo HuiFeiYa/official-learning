@@ -157,34 +157,70 @@
       const svg = document.getElementById('edges');
       svg.innerHTML = '';
       
-      const PARTITION_OFFSET_X = 250; // 右分区的 X 偏移量
+      const PADDING = 20; // 每个分区的左右padding
+      const LEFT_PADDING = 10; // 自动布局以后默认左边的 padding 是 12 。用于计算中心对称时候要处理
       
-      // 1. 渲染左分区（0-250）
+      // 1. 计算左分区的实际宽度
+      let leftMaxX = 0;
       leftResult.children.forEach(n => {
-        renderNodeAndPorts(n, svg, 0, 0);
+        const nodeRightEdge = n.x + n.width;
+        if (nodeRightEdge > leftMaxX) leftMaxX = nodeRightEdge;
+      });
+      const leftZoneWidth = leftMaxX + PADDING *2; // 左分区总宽度
+      
+      // 2. 计算右分区的实际宽度
+      let rightMaxX = 0;
+      rightResult.children.forEach(n => {
+        const nodeRightEdge = n.x + n.width;
+        if (nodeRightEdge > rightMaxX) rightMaxX = nodeRightEdge;
+      });
+      const rightZoneWidth = rightMaxX + PADDING *2; // 右分区总宽度
+      
+      // 3. 计算中心轴位置（取两个分区的最大宽度，保证对称）
+      const maxZoneWidth = Math.max(leftZoneWidth, rightZoneWidth);
+      const centerAxisX = maxZoneWidth; // 中心轴位置
+      
+      // 4. 计算左右分区的偏移量
+      // 左分区：居中到中心轴左侧
+      const leftOffsetX = (maxZoneWidth - leftZoneWidth) + PADDING;
+      // 右分区：居中到中心轴右侧
+      const rightOffsetX = centerAxisX - LEFT_PADDING + PADDING + (maxZoneWidth - rightZoneWidth);
+      
+      console.log(`左分区宽度: ${leftZoneWidth}, 右分区宽度: ${rightZoneWidth}`);
+      console.log(`中心轴位置: ${centerAxisX}, 最大分区宽度: ${maxZoneWidth}`);
+      console.log(`左分区偏移: ${leftOffsetX}, 右分区偏移: ${rightOffsetX}`);
+      
+      // 5. 渲染左分区
+      leftResult.children.forEach(n => {
+        renderNodeAndPorts(n, svg, leftOffsetX, 0);
       });
       leftResult.edges.forEach(e => {
-        renderEdge(e, svg, 0, 0);
+        renderEdge(e, svg, leftOffsetX, 0);
       });
       
-      // 2. 渲染右分区（250-500），添加偏移量
+      // 6. 渲染右分区
       rightResult.children.forEach(n => {
-        renderNodeAndPorts(n, svg, PARTITION_OFFSET_X, 0);
+        renderNodeAndPorts(n, svg, rightOffsetX, 0);
       });
       rightResult.edges.forEach(e => {
-        renderEdge(e, svg, PARTITION_OFFSET_X, 0);
+        renderEdge(e, svg, rightOffsetX, 0);
       });
       
-      // 3. 添加中心分隔线
+      // 7. 添加中心分隔线
       const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      axisLine.setAttribute('x1', PARTITION_OFFSET_X);
+      axisLine.setAttribute('x1', centerAxisX);
       axisLine.setAttribute('y1', 0);
-      axisLine.setAttribute('x2', PARTITION_OFFSET_X);
+      axisLine.setAttribute('x2', centerAxisX);
       axisLine.setAttribute('y2', 1000);
       axisLine.setAttribute('stroke', '#999');
       axisLine.setAttribute('stroke-width', '2');
       axisLine.setAttribute('stroke-dasharray', '10,5');
       svg.insertBefore(axisLine, svg.firstChild);
+      
+      // 调整 SVG 画布大小
+      const totalWidth = rightOffsetX + rightZoneWidth;
+      svg.setAttribute('width', totalWidth);
+      svg.parentElement.style.width = totalWidth + 'px';
       
     }).catch(err => {
       console.error('布局失败:', err);
