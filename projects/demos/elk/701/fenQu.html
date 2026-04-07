@@ -64,20 +64,45 @@
     /**
      * ELKJS 布局核心说明
      * 
-     * ELK (Eclipse Layout Kernel) 是一个自动图布局引擎，核心职责：
-     * 1. 接收图结构数据（节点、边、端口）
-     * 2. 根据布局算法和参数计算每个元素的最优位置
-     * 3. 返回带有坐标的布局结果，供前端渲染使用
+     * ELK (Eclipse Layout Kernel) 是一个自动图布局引擎。
      * 
-     * 布局三要素：
-     * - 节点 (children): 图中的实体元素，需指定 id、width、height
-     * - 边 (edges): 节点间的连线，通过 sources/targets 建立连接关系
-     * - 端口 (ports): 节点上的连接点，用于精确控制连线的附着位置
+     * 核心布局参数 (layoutOptions) 详析：
      * 
-     * 核心布局参数 (layoutOptions):
-     * - elk.algorithm: 布局算法（layered=分层布局，适合有向图）
-     * - elk.direction: 布局方向（RIGHT/LEFT/TOP/DOWN）
-     * - elk.spacing.nodeNode: 节点间最小间距
+     * 1. elk.algorithm: 布局算法
+     *    - 'layered': (常用) 分层布局，适用于有向图。将节点分层排列，减少交叉。
+     *    - 'stress': 基于距离的布局，适合无向图或追求整体距离均衡的场景。
+     *    - 'force': 力导向布局，模拟物理排斥和吸引。
+     *    - 'mrtree': 专门针对树形结构的布局。
+     * 
+     * 2. elk.direction: 整体布局方向
+     *    - 'DOWN' (默认), 'UP', 'LEFT', 'RIGHT'。
+     * 
+     * 3. elk.alignment: 节点在层内的对齐方式
+     *    - 'CENTER': 节点在其所在层中居中对齐。
+     *    - 'AUTOMATIC': 算法自动平衡位置。
+     * 
+     * 4. elk.spacing.nodeNode: 节点之间的最小间距（水平/垂直）。
+     * 
+     * 5. elk.layered.spacing.nodeNodeBetweenLayers: 分层布局中，不同层之间的间距。
+     * 
+     * 6. elk.layered.nodePlacement.strategy: 节点放置策略（决定节点 X 轴坐标的算法）
+     *    - 'BRANDES_KOEPF': (推荐) 生成美观且对称的布局。
+     *    - 'NETWORK_SIMPLEX': 最小化边长度。
+     *    - 'SIMPLE': 快速但可能不够美观。
+     *    - 'LINEAR_SEGMENTS': 适合特定类型的图。
+     * 
+     * 7. elk.layered.nodePlacement.bk.fixedAlignment: 配合 BRANDES_KOEPF 的具体对齐细则
+     *    - 'BALANCED': (常用) 尝试在所有可能的对齐方式中寻找平衡点，使父子节点居中对称。
+     *    - 'LEFTUP', 'LEFTDOWN', 'RIGHTUP', 'RIGHTDOWN': 偏向特定的角落。
+     * 
+     * 8. elk.portConstraints: 端口约束开关（非常重要！）
+     *    - 'FREE': (默认) ELK 自由移动端口以获得最优连线。
+     *    - 'FIXED_SIDE': 强制端口停留在由 'elk.port.side' 指定的侧边。
+     *    - 'FIXED_ORDER': 强制侧边且固定端口在侧边上的排列顺序。
+     *    - 'FIXED_POS': 完全手动指定坐标。
+     * 
+     * 9. elk.port.side: 端口所在侧边 (需配合 FIXED_SIDE)
+     *    - 'NORTH' (上), 'SOUTH' (下), 'EAST' (右), 'WEST' (左)。
      */
     
     // 等待页面加载完成确保 elkjs 库已加载
@@ -90,13 +115,13 @@
     const graphLeft = {
       id: "left",
       layoutOptions: {
-        "elk.algorithm": "layered",
-        "elk.direction": "DOWN",
-        "elk.spacing.nodeNode": 50,
-        "elk.alignment": "CENTER",
-        "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
-        "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
-        "elk.portConstraints": "FIXED_SIDE"
+        "elk.algorithm": "layered",                      // 分层布局算法
+        "elk.direction": "DOWN",                         // 从上往下布局
+        "elk.spacing.nodeNode": 50,                      // 同一层节点间的最小间距
+        "elk.alignment": "CENTER",                       // 节点在每一层内居中对齐
+        "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF", // 对称布局策略
+        "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED", // 自动寻找平衡点实现对称
+        "elk.portConstraints": "FIXED_SIDE"              // 允许固定端口侧边
       },
       children: [
         { id: "L1", width: 100, height: 40 },
@@ -135,12 +160,14 @@
         { id: "R2", width: 120, height: 50 },
         { id: "R3", width: 100, height: 60 },
         {
-          id: "R4",
+          id: "R411",
           width: 110,
           height: 45,
           ports: [
-            { id: "R4_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "TOP" } },
-            { id: "R4_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "BOTTOM" } }
+            // 修改为 WEST (左侧) 和 EAST (右侧) 以演示效果
+            // 确保使用标准常量：NORTH/SOUTH/EAST/WEST (或 TOP/BOTTOM/LEFT/RIGHT 也可)
+            { id: "R4_in", width: 12, height: 10, layoutOptions: { "elk.port.side": "RIGHT" } },
+            { id: "R4_out", width: 12, height: 10, layoutOptions: { "elk.port.side": "EAST" } }
           ]
         }
       ],

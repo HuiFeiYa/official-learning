@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>两栏对称布局演示 V2</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 40px;
+      font-family: "Microsoft YaHei", Arial, sans-serif;
+      background: #fff;
+    }
+    /* 顶部备注框 */
+    .note-box {
+      width: 400px;
+      margin: 0 auto 40px auto;
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      padding: 15px;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      font-size: 14px;
+      line-height: 1.6;
+      position: relative;
+    }
+    .note-box::after {
+      content: "";
+      position: absolute;
+      top: 0;
+      right: 0;
+      border-width: 0 15px 15px 0;
+      border-style: solid;
+      border-color: #fff #fff #ffe58f #ffe58f;
+    }
+    .container {
+      display: flex;
+      justify-content: center;
+      gap: 100px;
+      position: relative;
+    }
+    .zone-title {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .left-title { color: #c2185b; }
+    .right-title { color: #1a237e; }
+    
+    #canvas-container {
+      position: relative;
+      margin: 0 auto;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #333;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .divider {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 50%;
+      border-left: 2px dashed #ccc;
+      transform: translateX(-50%);
+    }
+    /* 节点样式 */
+    .node-label {
+      font-size: 13px;
+      font-weight: bold;
+      fill: #333;
+    }
+    .node-sublabel {
+      font-size: 11px;
+      fill: #666;
+    }
+    .port-label {
+      font-size: 10px;
+      fill: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="note-box">
+    1.RJ与DJ串联，功率依次传递<br>
+    2.DJ采用"抱轴"设计，直接连接滚轴<br>
+    3.电网可在DJ间调配功率<br>
+    配置：2轴 | 2RJ+2DJ | 2CLX(1入1出) | 串联 | DJ抱轴<br>
+    功率流路径：<br>
+    &nbsp;&nbsp;机械：RJ1 → CLX1 → DJ1 → JZ1 → 螺旋桨1<br>
+    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;RJ2 → CLX2 → DJ2 → JZ2 → 螺旋桨2<br>
+    &nbsp;&nbsp;电气：DW → DJ1, DW → DJ2
+  </div>
+
+  <div id="canvas-container">
+    <svg id="edges"></svg>
+  </div>
+
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      const ELK = window.ELK;
+      const elk = new ELK();
+
+      // 定义左舷的图结构数据
+      const graphLeft = {
+        id: "left",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": 60,
+          "elk.layered.spacing.nodeNodeBetweenLayers": 60,
+          "elk.alignment": "CENTER",
+          "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+          "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        children: [
+          { 
+            id: "RJ1", width: 60, height: 60, 
+            ports: [
+              { id: "RJ1_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+            ] 
+          },
+          { 
+            id: "CLX1", width: 80, height: 80, 
+            label: "CLX1", sublabel: "(1入1出)",
+            ports: [
+              { id: "CLX1_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "CLX1_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+            ] 
+          },
+          { 
+            id: "DJ1", width: 60, height: 60, 
+            label: "DJ1", sublabel: "(抱轴)",
+            ports: [
+              { id: "DJ1_mech_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "DJ1_mech_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
+              { id: "DJ1_elec_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口出1" },
+              { id: "DJ1_elec_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "电能端口入" }
+            ] 
+          },
+          { 
+            id: "JZ1", width: 60, height: 60, 
+            label: "JZ1", sublabel: "(螺旋桨1)",
+            ports: [
+              { id: "JZ1_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
+            ] 
+          }
+        ],
+        edges: [
+          { id: "e_rj1_clx1", sources: ["RJ1_out"], targets: ["CLX1_in"], label: "机械功率流1" },
+          { id: "e_clx1_dj1", sources: ["CLX1_out"], targets: ["DJ1_mech_in"], label: "传动机械功率1" },
+          { id: "e_dj1_jz1", sources: ["DJ1_mech_out"], targets: ["JZ1_in"], label: "电机驱动1" }
+        ]
+      };
+
+      // 定义右舷的图结构数据
+      const graphRight = {
+        id: "right",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": 60,
+          "elk.layered.spacing.nodeNodeBetweenLayers": 60,
+          "elk.alignment": "CENTER",
+          "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+          "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        children: [
+          { 
+            id: "RJ2", width: 60, height: 60, 
+            ports: [
+              { id: "RJ2_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+            ] 
+          },
+          { 
+            id: "CLX2", width: 80, height: 80, 
+            label: "CLX2", sublabel: "(1入1出)",
+            ports: [
+              { id: "CLX2_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "CLX2_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+            ] 
+          },
+          { 
+            id: "DJ2", width: 60, height: 60, 
+            label: "DJ2", sublabel: "(抱轴)",
+            ports: [
+              { id: "DJ2_mech_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "DJ2_mech_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
+              { id: "DJ2_elec_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口出1" },
+              { id: "DJ2_elec_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "电能端口入" }
+            ] 
+          },
+          { 
+            id: "JZ2", width: 60, height: 60, 
+            label: "JZ2", sublabel: "(螺旋桨2)",
+            ports: [
+              { id: "JZ2_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
+            ] 
+          }
+        ],
+        edges: [
+          { id: "e_rj2_clx2", sources: ["RJ2_out"], targets: ["CLX2_in"], label: "机械功率流2" },
+          { id: "e_clx2_dj2", sources: ["CLX2_out"], targets: ["DJ2_mech_in"], label: "传动机械功率2" },
+          { id: "e_dj2_jz2", sources: ["DJ2_mech_out"], targets: ["JZ2_in"], label: "电机驱动2" }
+        ]
+      };
+
+      // 定义中央 DW 节点的图结构数据
+      const graphCentral = {
+        id: "central",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": 60,
+          "elk.layered.spacing.nodeNodeBetweenLayers": 60,
+          "elk.alignment": "CENTER",
+          "elk.layered.nodePlacement.strategy": "BRANDES_KOEPF",
+          "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED",
+          "elk.portConstraints": "FIXED_SIDE"
+        },
+        children: [
+          { 
+            id: "DW", width: 60, height: 60, 
+            ports: [
+              { id: "DW_in1", width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口入1" },
+              { id: "DW_in2", width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口入2" }
+            ] 
+          }
+        ],
+        edges: [
+          // 这些边将在主布局中连接到 DJ1 和 DJ2
+        ]
+      };
+
+      Promise.all([
+        elk.layout(graphLeft),
+        elk.layout(graphRight),
+        elk.layout(graphCentral)
+      ]).then(([leftResult, rightResult, centralResult]) => {
+        const svg = document.getElementById('edges');
+        svg.innerHTML = '';
+        
+        const PADDING = 60;
+        const ZONE_GAP = 100; 
+        const CENTRAL_OFFSET_Y = 320; 
+
+        // 辅助函数：计算布局后的内容真实边界
+        const getResultBounds = (res) => {
+          let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+          res.children.forEach(n => {
+            minX = Math.min(minX, n.x);
+            maxX = Math.max(maxX, n.x + n.width);
+            minY = Math.min(minY, n.y);
+            maxY = Math.max(maxY, n.y + n.height);
+          });
+          return { minX, maxX, minY, maxY, width: maxX - minX, height: maxY - minY };
+        };
+
+        const leftBounds = getResultBounds(leftResult);
+        const rightBounds = getResultBounds(rightResult);
+        const centralBounds = getResultBounds(centralResult);
+
+        // 1. 核心对称布局逻辑
+        // 两侧内容的最大宽度，确保左右对称
+        const maxSideWidth = Math.max(leftBounds.width, rightBounds.width);
+        
+        // 计算画布中心线
+        const centerX = PADDING + maxSideWidth + ZONE_GAP + centralBounds.width / 2;
+        
+        // 计算各区域相对于中心线的偏移
+        const centralOffsetX = centerX - centralBounds.width / 2 - centralBounds.minX;
+        const leftOffsetX = (centerX - centralBounds.width / 2 - ZONE_GAP) - maxSideWidth / 2 - leftBounds.width / 2 - leftBounds.minX;
+        const rightOffsetX = (centerX + centralBounds.width / 2 + ZONE_GAP) + maxSideWidth / 2 - rightBounds.width / 2 - rightBounds.minX;
+
+        // 2. 渲染背景标题 (居中于各自区域)
+        renderTitle("左舷", centerX - centralBounds.width / 2 - ZONE_GAP - maxSideWidth / 2, 0, "left-title");
+        renderTitle("右舷", centerX + centralBounds.width / 2 + ZONE_GAP + maxSideWidth / 2, 0, "right-title");
+
+        // 3. 渲染中央虚线分隔线 (精确穿过中心)
+        const divider = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+        divider.setAttribute('x1', centerX);
+        divider.setAttribute('y1', 50);
+        divider.setAttribute('x2', centerX);
+        divider.setAttribute('y2', 1200); 
+        divider.setAttribute('stroke', '#ccc');
+        divider.setAttribute('stroke-width', '1.5');
+        divider.setAttribute('stroke-dasharray', '5,5');
+        svg.appendChild(divider);
+
+        // 4. 渲染各分区内容
+        const LEFT_Y = 80;
+        const RIGHT_Y = 80;
+        const CENTRAL_Y = CENTRAL_OFFSET_Y;
+
+        leftResult.children.forEach(n => renderNode(n, svg, leftOffsetX, LEFT_Y));
+        leftResult.edges.forEach(e => renderEdge(e, svg, leftOffsetX, LEFT_Y));
+
+        rightResult.children.forEach(n => renderNode(n, svg, rightOffsetX, RIGHT_Y));
+        rightResult.edges.forEach(e => renderEdge(e, svg, rightOffsetX, RIGHT_Y));
+
+        centralResult.children.forEach(n => renderNode(n, svg, centralOffsetX, CENTRAL_Y));
+
+        // 5. 跨区域连接 (DJ1 -> DW -> DJ2)
+        const connectNodes = (sRes, sId, sPortId, sOffX, sOffY, tRes, tId, tPortId, tOffX, tOffY, label) => {
+          const sNode = sRes.children.find(n => n.id === sId);
+          const tNode = tRes.children.find(n => n.id === tId);
+          const sPort = sNode.ports.find(p => p.id === sPortId);
+          const tPort = tNode.ports.find(p => p.id === tPortId);
+
+          if (sNode && tNode && sPort && tPort) {
+            const startX = sNode.x + sOffX + sPort.x + sPort.width / 2;
+            const startY = sNode.y + sOffY + sPort.y + sPort.height / 2;
+            const endX = tNode.x + tOffX + tPort.x + tPort.width / 2;
+            const endY = tNode.y + tOffY + tPort.y + tPort.height / 2;
+
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            path.setAttribute('class', 'edge');
+            path.setAttribute('d', `M ${startX} ${startY} L ${endX} ${endY}`);
+            svg.appendChild(path);
+
+            // 绘制标签
+            const lx = (startX + endX) / 2;
+            const ly = (startY + endY) / 2 - 8;
+            const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            text.setAttribute('x', lx);
+            text.setAttribute('y', ly);
+            text.setAttribute('text-anchor', 'middle');
+            text.setAttribute('class', 'port-label');
+            text.textContent = label;
+            svg.appendChild(text);
+          }
+        };
+
+        connectNodes(leftResult, "DJ1", "DJ1_elec_out", leftOffsetX, LEFT_Y, centralResult, "DW", "DW_in1", centralOffsetX, CENTRAL_Y, "电气功率流1");
+        connectNodes(centralResult, "DW", "DW_in2", centralOffsetX, CENTRAL_Y, rightResult, "DJ2", "DJ2_elec_in", rightOffsetX, RIGHT_Y, "电气功率流2");
+
+        // 6. 动态计算画布尺寸
+        const totalW = centerX * 2;
+        const totalH = Math.max(
+          LEFT_Y + leftBounds.maxY, 
+          RIGHT_Y + rightBounds.maxY, 
+          CENTRAL_Y + centralBounds.maxY
+        ) + PADDING;
+
+        svg.setAttribute('width', totalW);
+        svg.setAttribute('height', totalH);
+        svg.parentElement.style.width = totalW + 'px';
+        svg.parentElement.style.height = totalH + 'px';
+        divider.setAttribute('y2', totalH); // 更新分隔线高度
+
+      }).catch(err => {
+        console.error('布局失败:', err);
+      });
+
+      function renderTitle(text, x, y, className) {
+        const svg = document.getElementById('edges');
+        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        t.setAttribute('x', x);
+        t.setAttribute('y', y + 30);
+        t.setAttribute('text-anchor', 'middle');
+        t.setAttribute('class', 'zone-title ' + className);
+        t.textContent = text;
+        svg.appendChild(t);
+      }
+
+      function renderNode(n, svg, offsetX, offsetY) {
+        const x = n.x + offsetX;
+        const y = n.y + offsetY;
+        
+        // 绘制齿轮图标 (简化版)
+        const gearGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        
+        // 齿轮外圈
+        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        circle.setAttribute('cx', x + n.width / 2);
+        circle.setAttribute('cy', y + n.height / 2 - 10);
+        circle.setAttribute('r', 20);
+        circle.setAttribute('fill', '#f0f0f0');
+        circle.setAttribute('stroke', '#333');
+        circle.setAttribute('stroke-width', '2');
+        gearGroup.appendChild(circle);
+
+        // 齿轮齿 (简化为8个小矩形)
+        for(let i=0; i<8; i++) {
+          const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+          rect.setAttribute('x', -4);
+          rect.setAttribute('y', -24);
+          rect.setAttribute('width', 8);
+          rect.setAttribute('height', 8);
+          rect.setAttribute('fill', '#f0f0f0');
+          rect.setAttribute('stroke', '#333');
+          rect.setAttribute('transform', `translate(${x + n.width / 2}, ${y + n.height / 2 - 10}) rotate(${i * 45})`);
+          gearGroup.appendChild(rect);
+        }
+
+        // 中心圆
+        const center = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+        center.setAttribute('cx', x + n.width / 2);
+        center.setAttribute('cy', y + n.height / 2 - 10);
+        center.setAttribute('r', 8);
+        center.setAttribute('fill', '#fff');
+        center.setAttribute('stroke', '#333');
+        gearGroup.appendChild(center);
+
+        // 文本
+        const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+        text.setAttribute('x', x + n.width / 2);
+        text.setAttribute('y', y + n.height + 5);
+        text.setAttribute('text-anchor', 'middle');
+        text.setAttribute('class', 'node-label');
+        text.textContent = n.label || n.id;
+        gearGroup.appendChild(text);
+
+        if (n.sublabel) {
+          const sub = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          sub.setAttribute('x', x + n.width / 2);
+          sub.setAttribute('y', y + n.height + 18);
+          sub.setAttribute('text-anchor', 'middle');
+          sub.setAttribute('class', 'node-sublabel');
+          sub.textContent = n.sublabel;
+          gearGroup.appendChild(sub);
+        }
+
+        svg.appendChild(gearGroup);
+
+        // 端口
+        if (n.ports) {
+          n.ports.forEach(p => {
+            const px = x + p.x;
+            const py = y + p.y;
+            
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', px);
+            rect.setAttribute('y', py);
+            rect.setAttribute('width', p.width);
+            rect.setAttribute('height', p.height);
+            rect.setAttribute('fill', '#e6fffa');
+            rect.setAttribute('stroke', '#38a169');
+            svg.appendChild(rect);
+
+            // 端口标签
+            const pl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+            let lx = px, ly = py;
+            const side = p.layoutOptions['elk.port.side'];
+            if (side === 'WEST') { lx -= 5; ly += p.height/2; pl.setAttribute('text-anchor', 'end'); }
+            else if (side === 'EAST') { lx += p.width + 5; ly += p.height/2; pl.setAttribute('text-anchor', 'start'); }
+            else if (side === 'SOUTH') { lx += p.width/2; ly += p.height + 12; pl.setAttribute('text-anchor', 'middle'); }
+            else if (side === 'NORTH') { lx += p.width/2; ly -= 5; pl.setAttribute('text-anchor', 'middle'); }
+            
+            pl.setAttribute('x', lx);
+            pl.setAttribute('y', ly);
+            pl.setAttribute('class', 'port-label');
+            pl.setAttribute('dominant-baseline', 'middle');
+            pl.textContent = p.label;
+            svg.appendChild(pl);
+          });
+        }
+      }
+
+      function renderEdge(e, svg, offsetX, offsetY) {
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('class', 'edge');
+        let d = '';
+        e.sections.forEach(s => {
+          d += `M ${s.startPoint.x + offsetX} ${s.startPoint.y + offsetY} `;
+          if (s.bendPoints) s.bendPoints.forEach(bp => d += `L ${bp.x + offsetX} ${bp.y + offsetY} `);
+          d += `L ${s.endPoint.x + offsetX} ${s.endPoint.y + offsetY}`;
+        });
+        path.setAttribute('d', d);
+        svg.appendChild(path);
+
+        // 绘制边标签
+        if (e.label) {
+          const labelX = (e.sections[0].startPoint.x + e.sections[0].endPoint.x) / 2 + offsetX;
+          const labelY = (e.sections[0].startPoint.y + e.sections[0].endPoint.y) / 2 + offsetY - 5;
+          const labelText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          labelText.setAttribute('x', labelX);
+          labelText.setAttribute('y', labelY);
+          labelText.setAttribute('text-anchor', 'middle');
+          labelText.setAttribute('class', 'port-label'); // 复用端口标签样式
+          labelText.textContent = e.label;
+          svg.appendChild(labelText);
+        }
+      }
+    });
+  </script>
+</body>
+</html>
