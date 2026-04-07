@@ -12,8 +12,8 @@
     #canvas {
       border: 1px solid #ccc;
       position: relative;
-      width: 600px;
-      height: 400px;
+      width: 800px; /* 增加画布宽度 */
+      height: 600px; /* 增加画布高度 */
       background: #f9f9f9;
     }
     .node {
@@ -26,6 +26,7 @@
       border-radius: 4px;
       font-size: 12px;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      z-index: 10; /* 确保节点在连线之上 */
     }
     .port {
       position: absolute;
@@ -37,7 +38,7 @@
       align-items: center;
       justify-content: center;
       color: #333;
-      z-index: 1;
+      z-index: 11; /* 确保端口在节点之上 */
     }
     svg {
       position: absolute;
@@ -45,120 +46,138 @@
       left: 0;
       width: 100%;
       height: 100%;
-      pointer-events: none;
+      pointer-events: none; /* 允许点击穿透到下面的元素 */
+      z-index: 5; /* 确保 SVG 在节点之下 */
     }
     .edge {
       stroke: #666;
       stroke-width: 2;
       fill: none;
+      marker-end: url(#arrowhead); /* 添加箭头 */
+    }
+    .edge-label {
+      font-size: 10px;
+      fill: #333;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
   <h2>ELKJS 布局演示</h2>
   <div id="canvas">
-    <svg id="edges"></svg>
+    <svg id="edges">
+      <defs>
+        <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                refX="9" refY="3.5" orient="auto">
+          <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+        </marker>
+      </defs>
+    </svg>
   </div>
   <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
   <script>
-    // 等待页面加载完成确保 elkjs 库已加载
     window.addEventListener('load', function() {
-      const ELK = window.ELK; // 直接从 window 对象获取 ELK 构造函数
+      const ELK = window.ELK;
       const elk = new ELK();
 
-    const graph = {
-      id: "root",
-      layoutOptions: {
-        "elk.algorithm": "layered",
-        "elk.direction": "RIGHT",
-        "elk.spacing.nodeNode": 50
-      },
-      // 1. 节点
-      children: [
-        { id: "n1", width: 100, height: 40 },
-        { id: "n2", width: 100, height: 40 },
-        // 带端口的节点
-        {
-          id: "n3",
-          width: 120,
-          height: 60,
-          // 2. 端口
-          ports: [
-            { id: "p3_in", width: 10, height: 10 },
-            { id: "p3_out", width: 10, height: 10 }
-          ]
-        }
-      ],
-      // 3. 边（连线）
-      edges: [
-        { id: "e1", sources: ["n1"], targets: ["n2"] },
-        // 连接到端口
-        { id: "e2", sources: ["n2"], targets: ["p3_in"] },
-        { id: "e3", sources: ["p3_out"], targets: ["n1"] }
-      ]
-    };
+      const graph = {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "RIGHT",
+          "elk.spacing.nodeNode": 50,
+          "elk.portConstraints": "FIXED_POS" // 确保端口位置固定
+        },
+        children: [
+          { id: "n1", width: 100, height: 40, labels: [{ text: "Node 1" }] },
+          { id: "n2", width: 100, height: 40, labels: [{ text: "Node 2" }] },
+          {
+            id: "n3",
+            width: 120,
+            height: 60,
+            labels: [{ text: "Node 3" }],
+            ports: [
+              { id: "p3_in", width: 10, height: 10, x: 0, y: 25, labels: [{ text: "in" }] }, // 相对位置
+              { id: "p3_out", width: 10, height: 10, x: 110, y: 35, labels: [{ text: "out" }] } // 相对位置
+            ]
+          }
+        ],
+        edges: [
+          { id: "e1", sources: ["n1"], targets: ["n2"], labels: [{ text: "Edge 1" }] },
+          { id: "e2", sources: ["n2"], targets: ["p3_in"], labels: [{ text: "Edge 2" }] }, // 连接到端口
+          { id: "e3", sources: ["p3_out"], targets: ["n1"], labels: [{ text: "Edge 3" }] } // 从端口连接
+        ]
+      };
 
-    elk.layout(graph).then((result) => {
-      console.log("布局结果", result);
-      
-      // 输出所有节点坐标
-      result.children.forEach(n => {
-        console.log(`${n.id} x:${n.x} y:${n.y}`);
-      });
-      
-      // 渲染节点
-      const canvas = document.getElementById('canvas');
-      result.children.forEach(n => {
-        const nodeEl = document.createElement('div');
-        nodeEl.className = 'node';
-        nodeEl.id = n.id;
-        nodeEl.style.left = n.x + 'px';
-        nodeEl.style.top = n.y + 'px';
-        nodeEl.style.width = n.width + 'px';
-        nodeEl.style.height = n.height + 'px';
-        nodeEl.textContent = n.id;
-        canvas.appendChild(nodeEl);
+      elk.layout(graph).then((result) => {
+        console.log("布局结果", result);
+        
+        const canvas = document.getElementById('canvas');
+        const svg = document.getElementById('edges');
 
-        // 渲染端口
-        if (n.ports) {
-          n.ports.forEach(p => {
-            const portEl = document.createElement('div');
-            portEl.className = 'port';
-            portEl.id = p.id;
-            // 端口的坐标是相对于其父节点的
-            portEl.style.left = (n.x + p.x) + 'px';
-            portEl.style.top = (n.y + p.y) + 'px';
-            portEl.style.width = p.width + 'px';
-            portEl.style.height = p.height + 'px';
-            portEl.textContent = p.id.split('_')[1]; // 显示端口ID的后半部分
-            canvas.appendChild(portEl);
-          });
-        }
-      });
-      
-      // 渲染边（连线）
-      const svg = document.getElementById('edges');
-      result.edges.forEach(e => {
-        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-        path.setAttribute('class', 'edge');
-        let d = '';
+        // 渲染节点和端口
+        result.children.forEach(n => {
+          const nodeEl = document.createElement('div');
+          nodeEl.className = 'node';
+          nodeEl.id = n.id;
+          nodeEl.style.left = n.x + 'px';
+          nodeEl.style.top = n.y + 'px';
+          nodeEl.style.width = n.width + 'px';
+          nodeEl.style.height = n.height + 'px';
+          nodeEl.textContent = n.labels && n.labels.length > 0 ? n.labels[0].text : n.id;
+          canvas.appendChild(nodeEl);
 
-        e.sections.forEach(section => {
-          d += `M${section.startPoint.x} ${section.startPoint.y} `;
-          if (section.bendPoints) {
-            section.bendPoints.forEach(bp => {
-              d += `L${bp.x} ${bp.y} `;
+          if (n.ports) {
+            n.ports.forEach(p => {
+              const portEl = document.createElement('div');
+              portEl.className = 'port';
+              portEl.id = p.id;
+              // 端口的坐标是相对于其父节点的，ELKJS布局结果中的端口x,y是相对于父节点的偏移量
+              portEl.style.left = (n.x + p.x) + 'px';
+              portEl.style.top = (n.y + p.y) + 'px';
+              portEl.style.width = p.width + 'px';
+              portEl.style.height = p.height + 'px';
+              portEl.textContent = p.labels && p.labels.length > 0 ? p.labels[0].text : p.id.split('_')[1];
+              canvas.appendChild(portEl);
             });
           }
-          d += `L${section.endPoint.x} ${section.endPoint.y}`;
         });
-        path.setAttribute('d', d);
-        svg.appendChild(path);
+        
+        // 渲染边（连线）和标签
+        result.edges.forEach(e => {
+          console.log(`Edge ${e.id} sections:`, e.sections); // 添加这行来调试
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge');
+          let d = '';
+
+          e.sections.forEach(section => {
+            d += `M${section.startPoint.x} ${section.startPoint.y} `;
+            if (section.bendPoints) {
+              section.bendPoints.forEach(bp => {
+                d += `L${bp.x} ${bp.y} `;
+              });
+            }
+            d += `L${section.endPoint.x} ${section.endPoint.y}`;
+          });
+          path.setAttribute('d', d);
+          svg.appendChild(path);
+
+          // 渲染边标签
+          if (e.labels && e.labels.length > 0) {
+            e.labels.forEach(label => {
+              const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              text.setAttribute('class', 'edge-label');
+              text.setAttribute('x', label.x);
+              text.setAttribute('y', label.y);
+              text.textContent = label.text;
+              svg.appendChild(text);
+            });
+          }
+        });
+      }).catch(err => {
+        console.error('布局失败:', err);
       });
-    }).catch(err => {
-      console.error('布局失败:', err);
     });
-  });
-</script>
+  </script>
 </body>
 </html>

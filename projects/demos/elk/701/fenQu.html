@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ELKJS 分区对称布局</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      position: relative;
+      width: 1000px;
+      height: 600px;
+      background: #f9f9f9;
+    }
+    .container {
+      position: absolute;
+      background: #e3f2fd;
+      border: 2px solid #2196f3;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      color: #1976d2;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .node {
+      position: absolute;
+      background: #4CAF50;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    .port {
+      position: absolute;
+      background: #FFC107;
+      border: 1px solid #FFA000;
+      border-radius: 50%;
+      font-size: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #333;
+      z-index: 1;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #666;
+      stroke-width: 2;
+      fill: none;
+    }
+  </style>
+</head>
+<body>
+  <h2>ELKJS 分区对称布局（左右各5个节点）</h2>
+  <div id="canvas">
+    <svg id="edges"></svg>
+  </div>
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      const ELK = window.ELK; 
+      const elk = new ELK();
+
+      // 核心：定义带分区的图结构，体现并联和串联
+      const graph = {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "RIGHT",
+          "elk.spacing.nodeNode": 200, // 增加分区间的间距
+          "elk.padding": "[top=50, left=50, bottom=50, right=50]"
+        },
+        children: [
+          // 左侧分区：能源/控制区
+          {
+            id: "SourceZone",
+            width: 300,
+            height: 550,
+            layoutOptions: {
+              "elk.algorithm": "layered",
+              "elk.direction": "DOWN",
+              "elk.spacing.nodeNode": 80,
+              "elk.padding": "[top=60, left=30, bottom=60, right=30]"
+            },
+            children: [
+              { 
+                id: "PowerSource", 
+                width: 150, 
+                height: 50,
+                ports: [
+                  { id: "PS_out_1", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" } },
+                  { id: "PS_out_2", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" } }
+                ],
+                label: "电源 (Power Source)"
+              },
+              { 
+                id: "Controller", 
+                width: 150, 
+                height: 50,
+                ports: [
+                  { id: "CTRL_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" } },
+                  { id: "CTRL_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" } }
+                ],
+                label: "控制器 (Controller)"
+              }
+            ]
+          },
+          // 右侧分区：执行/负载区
+          {
+            id: "LoadZone",
+            width: 300,
+            height: 550,
+            layoutOptions: {
+              "elk.algorithm": "layered",
+              "elk.direction": "DOWN",
+              "elk.spacing.nodeNode": 80,
+              "elk.padding": "[top=60, left=30, bottom=60, right=30]"
+            },
+            children: [
+              { 
+                id: "Motor_1", 
+                width: 150, 
+                height: 50,
+                ports: [
+                  { id: "M1_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" } },
+                  { id: "M1_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" } }
+                ],
+                label: "电机1 (Motor 1)"
+              },
+              { 
+                id: "Motor_2", 
+                width: 150, 
+                height: 50,
+                ports: [
+                  { id: "M2_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" } }
+                ],
+                label: "电机2 (Motor 2)"
+              },
+              { 
+                id: "Propeller", 
+                width: 150, 
+                height: 50,
+                ports: [
+                  { id: "PROP_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" } }
+                ],
+                label: "螺旋桨 (Propeller)"
+              }
+            ]
+          }
+        ],
+        edges: [
+          // --- 串联 (Series) 跨分区体现 ---
+          // 电源 -> (跨分区) -> 电机1 -> 螺旋桨
+          // 逻辑：信号/电流 依次流经不同设备
+          { id: "series_1", sources: ["PS_out_1"], targets: ["M1_in"], label: "串联流-1" },
+          { id: "series_2", sources: ["M1_out"], targets: ["PROP_in"], label: "串联流-2" },
+
+          // --- 并联 (Parallel) 跨分区体现 ---
+          // 控制器输出 同时 指向 电机1 和 电机2
+          // 逻辑：一个源驱动多个并列负载
+          { id: "parallel_1", sources: ["CTRL_out"], targets: ["M1_in"], label: "并联支路-A" },
+          { id: "parallel_2", sources: ["CTRL_out"], targets: ["M2_in"], label: "并联支路-B" }
+        ]
+      };
+
+      elk.layout(graph).then((result) => {
+        console.log("分区布局结果", result);
+        
+        // 输出节点坐标信息
+        console.log("=== 分区容器坐标 ===");
+        result.children.forEach(container => {
+          console.log(`${container.id}: x=${container.x}, y=${container.y}, width=${container.width}, height=${container.height}`);
+          
+          if (container.children) {
+            console.log(`  └─ 内部节点:`);
+            container.children.forEach(node => {
+              console.log(`     ${node.id}: x=${node.x}, y=${node.y} (相对于父容器)`);
+            });
+          }
+        });
+        
+        console.log("=== 边的连接关系 ===");
+        result.edges.forEach(e => {
+          console.log(`${e.id}: ${e.sources.join(',')} → ${e.targets.join(',')} - sections: ${e.sections ? e.sections.length : 0}`);
+        });
+        
+        const canvas = document.getElementById('canvas');
+        const svg = document.getElementById('edges');
+        
+        // 清空 SVG 内容
+        svg.innerHTML = '';
+
+        // 渲染顺序很重要：后绘制的会覆盖先绘制的
+        // 正确顺序：节点 → 端口 → 边连线 → 边标签
+        
+        // 1. 先渲染节点和端口（放在底层）
+        result.children.forEach(container => {
+          if (container.children) {
+            container.children.forEach(node => {
+              const nodeX = container.x + node.x;
+              const nodeY = container.y + node.y;
+              
+              // 创建 SVG 组
+              const nodeGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+              
+              // 节点矩形
+              const nodeRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+              nodeRect.setAttribute('x', nodeX);
+              nodeRect.setAttribute('y', nodeY);
+              nodeRect.setAttribute('width', node.width);
+              nodeRect.setAttribute('height', node.height);
+              nodeRect.setAttribute('fill', '#4CAF50');
+              nodeRect.setAttribute('rx', '4');
+              nodeRect.setAttribute('filter', 'drop-shadow(0 2px 4px rgba(0,0,0,0.2))');
+              nodeGroup.appendChild(nodeRect);
+              
+              // 节点文字
+              const nodeText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+              nodeText.setAttribute('x', nodeX + node.width / 2);
+              nodeText.setAttribute('y', nodeY + node.height / 2);
+              nodeText.setAttribute('text-anchor', 'middle');
+              nodeText.setAttribute('dominant-baseline', 'middle');
+              nodeText.setAttribute('fill', 'white');
+              nodeText.setAttribute('font-size', '12px');
+              nodeText.textContent = node.label || node.id;
+              nodeGroup.appendChild(nodeText);
+              
+              svg.appendChild(nodeGroup);
+
+              // 渲染端口
+              if (node.ports) {
+                node.ports.forEach(port => {
+                  const portX = container.x + node.x + port.x;
+                  const portY = container.y + node.y + port.y;
+                  
+                  const portCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                  portCircle.setAttribute('cx', portX + port.width / 2);
+                  portCircle.setAttribute('cy', portY + port.height / 2);
+                  portCircle.setAttribute('r', port.width / 2);
+                  portCircle.setAttribute('fill', '#FFC107');
+                  portCircle.setAttribute('stroke', '#FFA000');
+                  portCircle.setAttribute('stroke-width', '1');
+                  svg.appendChild(portCircle);
+                });
+              }
+            });
+          }
+        });
+        
+        // 2. 再渲染边连线（放在节点上方）
+        result.edges.forEach(e => {
+          if (!e.sections || e.sections.length === 0) return;
+          
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge');
+          // 根据 ID 区分颜色
+          if (e.id.startsWith('series')) {
+            path.style.stroke = '#f44336'; // 红色表示串联
+          } else if (e.id.startsWith('parallel')) {
+            path.style.stroke = '#2196f3'; // 蓝色表示并联
+          }
+          
+          let d = '';
+          e.sections.forEach(section => {
+            d += `M${section.startPoint.x} ${section.startPoint.y} `;
+            if (section.bendPoints) {
+              section.bendPoints.forEach(bp => {
+                d += `L${bp.x} ${bp.y} `;
+              });
+            }
+            d += `L${section.endPoint.x} ${section.endPoint.y}`;
+          });
+          
+          path.setAttribute('d', d);
+          svg.appendChild(path);
+        });
+        
+        // 3. 最后渲染边标签（放在最顶层，避免被遮挡）
+        result.edges.forEach(e => {
+          if (!e.sections || e.sections.length === 0 || !e.label) return;
+          
+          const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          const section = e.sections[0];
+          const midX = (section.startPoint.x + section.endPoint.x) / 2;
+          const midY = (section.startPoint.y + section.endPoint.y) / 2;
+          text.setAttribute('x', midX);
+          text.setAttribute('y', midY - 5);
+          text.setAttribute('font-size', '10px');
+          
+          // 根据边的类型设置颜色
+          if (e.id.startsWith('series')) {
+            text.setAttribute('fill', '#f44336');
+          } else if (e.id.startsWith('parallel')) {
+            text.setAttribute('fill', '#2196f3');
+          }
+          
+          text.textContent = e.label;
+          svg.appendChild(text);
+        });
+      }).catch(err => {
+        console.error('布局失败:', err);
+      });
+    });
+  </script>
+</body>
+</html>
