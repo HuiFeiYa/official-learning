@@ -57,7 +57,7 @@
 <body>
   <h2>ELKJS 布局演示</h2>
   <div id="canvas">
-    <svg id="edges"></svg>
+    <svg id="edges" height="1000"></svg>
   </div>
   <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
   <script>
@@ -143,59 +143,167 @@
         { id: "e7", sources: ["R4_out"], targets: ["R1"] }
       ]
     };
+    
+    // 定义中间分区的图结构数据（更复杂，节点更多，宽度更大）
+    const graphCenter = {
+      id: "center",
+      layoutOptions: {
+        "elk.algorithm": "layered",
+        "elk.direction": "DOWN",
+        "elk.spacing.nodeNode": 60,  // 更大的节点间距
+        "elk.layered.spacing.nodeNodeBetweenLayers": 80  // 层间距更大
+      },
+      children: [
+        // 第一层：输入层
+        { 
+          id: "C_Input1", 
+          width: 140, 
+          height: 50,
+          ports: [
+            { id: "C_In1_out", width: 12, height: 10 }
+          ]
+        },
+        { 
+          id: "C_Input2", 
+          width: 140, 
+          height: 50,
+          ports: [
+            { id: "C_In2_out", width: 12, height: 10 }
+          ]
+        },
+        // 第二层：处理层
+        { 
+          id: "C_Process1", 
+          width: 160, 
+          height: 55,
+          ports: [
+            { id: "C_P1_in1", width: 12, height: 10 },
+            { id: "C_P1_in2", width: 12, height: 10 },
+            { id: "C_P1_out", width: 12, height: 10 }
+          ]
+        },
+        { 
+          id: "C_Process2", 
+          width: 160, 
+          height: 55,
+          ports: [
+            { id: "C_P2_in", width: 12, height: 10 },
+            { id: "C_P2_out1", width: 12, height: 10 },
+            { id: "C_P2_out2", width: 12, height: 10 }
+          ]
+        },
+        // 第三层：聚合层
+        { 
+          id: "C_Aggregate", 
+          width: 180, 
+          height: 60,
+          ports: [
+            { id: "C_Agg_in1", width: 12, height: 10 },
+            { id: "C_Agg_in2", width: 12, height: 10 },
+            { id: "C_Agg_out", width: 12, height: 10 }
+          ]
+        },
+        // 第四层：输出层
+        { 
+          id: "C_Output1", 
+          width: 140, 
+          height: 50,
+          ports: [
+            { id: "C_Out1_in", width: 12, height: 10 }
+          ]
+        },
+        { 
+          id: "C_Output2", 
+          width: 140, 
+          height: 50,
+          ports: [
+            { id: "C_Out2_in", width: 12, height: 10 }
+          ]
+        }
+      ],
+      edges: [
+        // 输入层 → 处理层（并行处理）
+        { id: "c_e1", sources: ["C_In1_out"], targets: ["C_P1_in1"] },
+        { id: "c_e2", sources: ["C_In1_out"], targets: ["C_P2_in"] },
+        { id: "c_e3", sources: ["C_In2_out"], targets: ["C_P1_in2"] },
+        { id: "c_e4", sources: ["C_In2_out"], targets: ["C_P2_in"] },
+        
+        // 处理层内部流转
+        { id: "c_e5", sources: ["C_P1_out"], targets: ["C_Agg_in1"] },
+        { id: "c_e6", sources: ["C_P2_out1"], targets: ["C_Agg_in2"] },
+        { id: "c_e7", sources: ["C_P2_out2"], targets: ["C_Agg_in1"] },
+        
+        // 聚合层 → 输出层（分发）
+        { id: "c_e8", sources: ["C_Agg_out"], targets: ["C_Out1_in"] },
+        { id: "c_e9", sources: ["C_Agg_out"], targets: ["C_Out2_in"] }
+      ]
+    };
 
     /**
-     * 执行布局计算 - 两个分区各自独立布局
+     * 执行布局计算 - 三个分区各自独立布局
      */
     Promise.all([
       elk.layout(graphLeft),
+      elk.layout(graphCenter),
       elk.layout(graphRight)
-    ]).then(([leftResult, rightResult]) => {
+    ]).then(([leftResult, centerResult, rightResult]) => {
       console.log("左分区布局结果", leftResult);
+      console.log("中间分区布局结果", centerResult);
       console.log("右分区布局结果", rightResult);
       
       const svg = document.getElementById('edges');
       svg.innerHTML = '';
       
       const PADDING = 20; // 每个分区的左右padding
-      const LEFT_PADDING = 10; // 自动布局以后默认左边的 padding 是 12 。用于计算中心对称时候要处理
+      const LEFT_PADDING = 10; // ELK 自动布局的默认左边距
       
-      // 1. 计算左分区的实际宽度
-      let leftMaxX = 0;
-      leftResult.children.forEach(n => {
-        const nodeRightEdge = n.x + n.width;
-        if (nodeRightEdge > leftMaxX) leftMaxX = nodeRightEdge;
-      });
-      const leftZoneWidth = leftMaxX + PADDING *2; // 左分区总宽度
+      // 1. 计算三个分区的实际宽度
+      const calculateZoneWidth = (result) => {
+        let maxX = 0;
+        result.children.forEach(n => {
+          const nodeRightEdge = n.x + n.width;
+          if (nodeRightEdge > maxX) maxX = nodeRightEdge;
+        });
+        return maxX + PADDING * 2;
+      };
       
-      // 2. 计算右分区的实际宽度
-      let rightMaxX = 0;
-      rightResult.children.forEach(n => {
-        const nodeRightEdge = n.x + n.width;
-        if (nodeRightEdge > rightMaxX) rightMaxX = nodeRightEdge;
-      });
-      const rightZoneWidth = rightMaxX + PADDING *2; // 右分区总宽度
+      const leftZoneWidth = calculateZoneWidth(leftResult);
+      const centerZoneWidth = calculateZoneWidth(centerResult);
+      const rightZoneWidth = calculateZoneWidth(rightResult);
       
-      // 3. 计算中心轴位置（取两个分区的最大宽度，保证对称）
+      console.log(`左分区宽度: ${leftZoneWidth}`);
+      console.log(`中间分区宽度: ${centerZoneWidth}`);
+      console.log(`右分区宽度: ${rightZoneWidth}`);
+      
+      // 2. 计算最大宽度（用于对称）
       const maxZoneWidth = Math.max(leftZoneWidth, rightZoneWidth);
-      const centerAxisX = maxZoneWidth; // 中心轴位置
       
-      // 4. 计算左右分区的偏移量
-      // 左分区：居中到中心轴左侧
-      const leftOffsetX = (maxZoneWidth - leftZoneWidth) + PADDING;
-      // 右分区：居中到中心轴右侧
-      const rightOffsetX = centerAxisX - LEFT_PADDING + PADDING + (maxZoneWidth - rightZoneWidth);
+      // 3. 计算各分区的偏移量
+      // 左分区：居左
+      const leftOffsetX = PADDING;
+      // 中间分区：在左分区右侧，留出间距
+      const centerOffsetX = leftOffsetX + leftZoneWidth + PADDING * 2;
+      // 右分区：与左分区对称
+      const rightOffsetX = centerOffsetX + centerZoneWidth + PADDING * 2;
       
-      console.log(`左分区宽度: ${leftZoneWidth}, 右分区宽度: ${rightZoneWidth}`);
-      console.log(`中心轴位置: ${centerAxisX}, 最大分区宽度: ${maxZoneWidth}`);
-      console.log(`左分区偏移: ${leftOffsetX}, 右分区偏移: ${rightOffsetX}`);
+      console.log(`左分区偏移: ${leftOffsetX}`);
+      console.log(`中间分区偏移: ${centerOffsetX}`);
+      console.log(`右分区偏移: ${rightOffsetX}`);
       
-      // 5. 渲染左分区
+      // 4. 渲染左分区
       leftResult.children.forEach(n => {
         renderNodeAndPorts(n, svg, leftOffsetX, 0);
       });
       leftResult.edges.forEach(e => {
         renderEdge(e, svg, leftOffsetX, 0);
+      });
+      
+      // 5. 渲染中间分区
+      centerResult.children.forEach(n => {
+        renderNodeAndPorts(n, svg, centerOffsetX, 0);
+      });
+      centerResult.edges.forEach(e => {
+        renderEdge(e, svg, centerOffsetX, 0);
       });
       
       // 6. 渲染右分区
@@ -206,21 +314,49 @@
         renderEdge(e, svg, rightOffsetX, 0);
       });
       
-      // 7. 添加中心分隔线
-      const axisLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-      axisLine.setAttribute('x1', centerAxisX);
-      axisLine.setAttribute('y1', 0);
-      axisLine.setAttribute('x2', centerAxisX);
-      axisLine.setAttribute('y2', 1000);
-      axisLine.setAttribute('stroke', '#999');
-      axisLine.setAttribute('stroke-width', '2');
-      axisLine.setAttribute('stroke-dasharray', '10,5');
-      svg.insertBefore(axisLine, svg.firstChild);
+      // 7. 添加分隔线
+      // 左-中分隔线
+      const divider1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      divider1.setAttribute('x1', leftOffsetX + leftZoneWidth);
+      divider1.setAttribute('y1', 0);
+      divider1.setAttribute('x2', leftOffsetX + leftZoneWidth);
+      divider1.setAttribute('y2', 1000);
+      divider1.setAttribute('stroke', '#999');
+      divider1.setAttribute('stroke-width', '2');
+      divider1.setAttribute('stroke-dasharray', '10,5');
+      svg.appendChild(divider1);
       
-      // 调整 SVG 画布大小
+      // 中-右分隔线
+      const divider2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      divider2.setAttribute('x1', centerOffsetX + centerZoneWidth);
+      divider2.setAttribute('y1', 0);
+      divider2.setAttribute('x2', centerOffsetX + centerZoneWidth);
+      divider2.setAttribute('y2', 1000);
+      divider2.setAttribute('stroke', '#999');
+      divider2.setAttribute('stroke-width', '2');
+      divider2.setAttribute('stroke-dasharray', '10,5');
+      svg.appendChild(divider2);
+      
+      // 8. 计算并调整 SVG 画布大小
+      // 计算最大高度
+      let maxZoneHeight = 0;
+      
+      [leftResult, centerResult, rightResult].forEach(result => {
+        result.children.forEach(n => {
+          const nodeBottomEdge = n.y + n.height;
+          if (nodeBottomEdge > maxZoneHeight) maxZoneHeight = nodeBottomEdge;
+        });
+      });
+      
+      const totalHeight = maxZoneHeight + PADDING * 2; // 加上上下padding
       const totalWidth = rightOffsetX + rightZoneWidth;
+      
       svg.setAttribute('width', totalWidth);
+      svg.setAttribute('height', totalHeight);
       svg.parentElement.style.width = totalWidth + 'px';
+      svg.parentElement.style.height = totalHeight + 'px';
+      
+      console.log(`画布大小: ${totalWidth} x ${totalHeight}`);
       
     }).catch(err => {
       console.error('布局失败:', err);
