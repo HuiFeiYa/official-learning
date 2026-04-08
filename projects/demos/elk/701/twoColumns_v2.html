@@ -126,33 +126,36 @@
         children: [
           { 
             id: "RJ1", width: 60, height: 60, 
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "RJ1_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+              { id: "RJ1_out", x: 30, y: 60, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
             ] 
           },
           { 
             id: "CLX1", width: 80, height: 80, 
             label: "CLX1", sublabel: "(1入1出)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "CLX1_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
-              { id: "CLX1_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+              { id: "CLX1_in", x: 40, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "CLX1_out", x: 40, y: 80, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
             ] 
           },
           { 
             id: "DJ1", width: 60, height: 60, 
             label: "DJ1", sublabel: "(抱轴)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "DJ1_mech_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
-              { id: "DJ1_mech_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
-              { id: "DJ1_elec_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口出1" },
-              { id: "DJ1_elec_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "电能端口入" }
+              { id: "DJ1_mech_in", x: 0, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "DJ1_mech_out", x: 30, y: 60, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
+              { id: "DJ1_elec_out", x: 60, y: 30, width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口出1" },
             ] 
           },
           { 
             id: "JZ1", width: 60, height: 60, 
             label: "JZ1", sublabel: "(螺旋桨1)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "JZ1_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
+              { id: "JZ1_in", x: 30, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
             ] 
           }
         ],
@@ -179,33 +182,36 @@
         children: [
           { 
             id: "RJ2", width: 60, height: 60, 
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "RJ2_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+              { id: "RJ2_out", x: 30, y: 60, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
             ] 
           },
           { 
             id: "CLX2", width: 80, height: 80, 
             label: "CLX2", sublabel: "(1入1出)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "CLX2_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
-              { id: "CLX2_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
+              { id: "CLX2_in", x: 40, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "CLX2_out", x: 40, y: 80, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出" }
             ] 
           },
           { 
             id: "DJ2", width: 60, height: 60, 
             label: "DJ2", sublabel: "(抱轴)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "DJ2_mech_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
-              { id: "DJ2_mech_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
-              { id: "DJ2_elec_out", width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口出1" },
-              { id: "DJ2_elec_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "电能端口入" }
+              { id: "DJ2_mech_in", x: 60, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" },
+              { id: "DJ2_mech_out", x: 30, y: 60, width: 10, height: 10, layoutOptions: { "elk.port.side": "SOUTH" }, label: "机械能端口出2" },
+              { id: "DJ2_elec_out", x: 0, y: 30, width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口出1" },
             ] 
           },
           { 
             id: "JZ2", width: 60, height: 60, 
             label: "JZ2", sublabel: "(螺旋桨2)",
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "JZ2_in", width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
+              { id: "JZ2_in", x: 30, y: 0, width: 10, height: 10, layoutOptions: { "elk.port.side": "NORTH" }, label: "机械能端口入" }
             ] 
           }
         ],
@@ -232,9 +238,10 @@
         children: [
           { 
             id: "DW", width: 60, height: 60, 
+            layoutOptions: { "elk.portConstraints": "FIXED_POS" },
             ports: [
-              { id: "DW_in1", width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口入1" },
-              { id: "DW_in2", width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口入2" }
+              { id: "DW_in1", x: 0, y: 30, width: 10, height: 10, layoutOptions: { "elk.port.side": "WEST" }, label: "电能端口入1" },
+              { id: "DW_in2", x: 60, y: 30, width: 10, height: 10, layoutOptions: { "elk.port.side": "EAST" }, label: "电能端口入2" }
             ] 
           }
         ],
@@ -343,7 +350,7 @@
         };
 
         connectNodes(leftResult, "DJ1", "DJ1_elec_out", leftOffsetX, LEFT_Y, centralResult, "DW", "DW_in1", centralOffsetX, CENTRAL_Y, "电气功率流1");
-        connectNodes(centralResult, "DW", "DW_in2", centralOffsetX, CENTRAL_Y, rightResult, "DJ2", "DJ2_elec_in", rightOffsetX, RIGHT_Y, "电气功率流2");
+        connectNodes(centralResult, "DW", "DW_in2", centralOffsetX, CENTRAL_Y, rightResult, "DJ2", "DJ2_elec_out", rightOffsetX, RIGHT_Y, "电气功率流2");
 
         // 6. 动态计算画布尺寸
         const totalW = centerX * 2;
