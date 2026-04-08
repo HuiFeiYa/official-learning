@@ -59,7 +59,7 @@ const graph = {
       layoutOptions: { 
         "elk.portConstraints": "FIXED_SIDE",
         // 关键：让端口在节点边缘均匀分布
-        "elk.portAlignment.default": "CENTER"
+        // "elk.portAlignment.default": "CENTER"
       },
       ports: [
         {
@@ -68,7 +68,6 @@ const graph = {
           height: 10,
           properties: { 
             "elk.port.side": "NORTH",  // 👈 改为 NORTH，与 RJ1 的 SOUTH 对齐
-            "elk.port.index": "0"
           }
         },
         {
@@ -77,7 +76,6 @@ const graph = {
           height: 10,
           properties: { 
             "elk.port.side": "NORTH",  // 👈 RJ2 也连到 NORTH
-            "elk.port.index": "1"
           }
         },
         {
@@ -86,7 +84,6 @@ const graph = {
           height: 10,
           properties: { 
             "elk.port.side": "SOUTH",  // 👈 改为 SOUTH，与 JZ1 的 NORTH 对齐
-            "elk.port.index": "0"
           }
         },
         {
@@ -95,7 +92,6 @@ const graph = {
           height: 10,
           properties: { 
             "elk.port.side": "SOUTH",  // 👈 JZ2 也连到 SOUTH
-            "elk.port.index": "1"
           }
         }
       ]
