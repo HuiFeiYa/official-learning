@@ -26,11 +26,18 @@ const graph = {
         {
           id: 'L1-1', 
           x: 0,  // 相对于父节点 n1 的 x 坐标
-          y: 25,  // 相对于父节点 n1 的 y 坐标（50 就是在底部）
+          y: 20,  // 相对于父节点 n1 的 y 坐标（50 就是在底部）
           width: 10, 
           height: 10,
           // 你不需要关心端口是"进入"还是"离开"，ELK 也不区分这个。elk.port.side 只描述物理位置，不描述流向。
           // properties: { "elk.port.side": "SOUTH" } // side 表示边从哪个方向进入/离开这个端口。
+        },
+        {
+          id: 'L1-2',
+          x: 40,
+          y: 20,
+          width: 10,
+          height: 10
         }
       ]
     },
@@ -50,6 +57,14 @@ const graph = {
           properties: {
             "elk.port.side": "WEST"  // 强制在左侧（输入）
           }
+        },
+        {
+          id: 'L2-2',
+          width: 10,
+          height: 10,
+          properties: {
+            "elk.port.side": "SOUTH"  // 强制在底部（输出）
+          }
         }
       ]
     },
@@ -66,13 +81,25 @@ const graph = {
           y: 0,  // 顶部端口，接收来自 n1 的连线
           width: 10,
           height: 10
+        },
+        {
+          id: 'L3-2',
+          x: 20,
+          y: 40,
+          width: 10,
+          height: 10
         }
       ]
     },
   ],
   edges: [
     { id: "e1", sources: ["L1-1"], targets: ["L2-1"] },
-    { id: "e2", sources: ["L1-1"], targets: ["L3-1"] },
+    { id: "e2", sources: ["L1-2"], targets: ["L3-1"] },
+    {
+      id: "e3",
+      sources: ["L2-2"],
+      targets: ["L3-2"],
+    }
   ],
 };
 
