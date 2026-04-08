@@ -20,13 +20,56 @@ const graph = {
     "elk.layered.nodePlacement.bk.fixedAlignment": "BALANCED", // 自动寻找平衡点实现对称
   },
   children: [
-    { id: "n1", width: 50, height: 50, label: "Node 1" },
-    { id: "n2", width: 50, height: 50, label: "Node 2" },
-    { id: "n3", width: 50, height: 50, label: "Node 3" },
+    { id: "n1", width: 50, height: 50, label: "Node 1" ,
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" }, // 关键：允许固定端口位置
+      ports:[
+        {
+          id: 'L1-1', 
+          x: 0,  // 相对于父节点 n1 的 x 坐标
+          y: 25,  // 相对于父节点 n1 的 y 坐标（50 就是在底部）
+          width: 10, 
+          height: 10,
+          // 你不需要关心端口是"进入"还是"离开"，ELK 也不区分这个。elk.port.side 只描述物理位置，不描述流向。
+          // properties: { "elk.port.side": "SOUTH" } // side 表示边从哪个方向进入/离开这个端口。
+        }
+      ]
+    },
+    { 
+      id: "n2", 
+      width: 50, 
+      height: 50, 
+      label: "Node 2",
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+      ports: [
+        {
+          id: 'L2-1',
+          x: 20,
+          y: 0,  // 顶部端口，接收来自 n1 的连线
+          width: 10,
+          height: 10
+        }
+      ]
+    },
+    { 
+      id: "n3", 
+      width: 50, 
+      height: 50, 
+      label: "Node 3",
+      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+      ports: [
+        {
+          id: 'L3-1',
+          x: 20,
+          y: 0,  // 顶部端口，接收来自 n1 的连线
+          width: 10,
+          height: 10
+        }
+      ]
+    },
   ],
   edges: [
-    { id: "e1", sources: ["n1"], targets: ["n2"] },
-    { id: "e2", sources: ["n1"], targets: ["n3"] },
+    { id: "e1", sources: ["L1-1"], targets: ["L2-1"] },
+    { id: "e2", sources: ["L1-1"], targets: ["L3-1"] },
   ],
 };
 
@@ -34,6 +77,7 @@ onMounted(async () => {
   try {
     const result = await elk.layout(graph);
     layoutResult.value = result;
+    console.log("ELK Layout result:", result);
   } catch (error) {
     console.error("ELK Layout error:", error);
   }
@@ -193,6 +237,19 @@ const getEdgePath = (edge) => {
         <text x="0" y="45" text-anchor="middle" class="node-label">
           {{ node.label }}
         </text>
+        
+        <!-- 绘制端口 -->
+        <rect
+          v-for="port in node.ports"
+          :key="port.id"
+          :x="port.x - node.width / 2"
+          :y="port.y - node.height / 2"
+          :width="port.width"
+          :height="port.height"
+          fill="#FFC107"
+          stroke="#FFA000"
+          stroke-width="1"
+        />
       </g>
     </svg>
     <div v-else>Loading layout...</div>
