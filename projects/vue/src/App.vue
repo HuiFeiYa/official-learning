@@ -1,9 +1,8 @@
 <template>
-  <elk />
+  <router-view />
 </template>
 
 <script setup lang="ts">
-import elk from './elk/01.vue'
 </script>
 
 <style scoped>
