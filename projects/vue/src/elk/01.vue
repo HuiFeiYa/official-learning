@@ -39,14 +39,17 @@ const graph = {
       width: 50, 
       height: 50, 
       label: "Node 2",
-      layoutOptions: { "elk.portConstraints": "FIXED_POS" },
+      // 固定在指定边，位置自动优化
+      layoutOptions: { "elk.portConstraints": "FIXED_SIDE" },
       ports: [
+        // 需要指定端口的大小，可以指定端口从那端输入/输出，具体位置计算得出
         {
           id: 'L2-1',
-          x: 20,
-          y: 0,  // 顶部端口，接收来自 n1 的连线
           width: 10,
-          height: 10
+          height: 10,
+          properties: {
+            "elk.port.side": "WEST"  // 强制在左侧（输入）
+          }
         }
       ]
     },
