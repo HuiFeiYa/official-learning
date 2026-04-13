@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>内部模块图 - 四区域布局</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f0f2f5;
+    }
+    h2 {
+      margin: 0 0 15px 0;
+      color: #333;
+    }
+    #canvas-container {
+      width: 100%;
+      overflow: auto;
+      border: 2px solid #333;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      background: #fff;
+    }
+    #canvas {
+      position: relative;
+      background: #fff;
+    }
+    
+    /* 区域标签 */
+    .region-label {
+      position: absolute;
+      font-size: 14px;
+      font-weight: bold;
+      color: #999;
+      pointer-events: none;
+    }
+    
+    /* 模块节点 */
+    .module {
+      position: absolute;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: bold;
+      color: white;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+      z-index: 10;
+    }
+    .module-top { background: linear-gradient(135deg, #FF9800, #F57C00); }
+    .module-sym-left { background: linear-gradient(135deg, #2196F3, #1565C0); }
+    .module-sym-right { background: linear-gradient(135deg, #03A9F4, #0288D1); }
+    .module-right { background: linear-gradient(135deg, #4CAF50, #388E3C); }
+    .module-bottom { background: linear-gradient(135deg, #9C27B0, #7B1FA2); }
+    
+    /* 端口 - 方形 */
+    .port {
+      position: absolute;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      border: 2px solid #fff;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      z-index: 20;
+      cursor: pointer;
+    }
+    .port:hover {
+      transform: scale(1.3);
+    }
+    .port-input { background: #4CAF50; }
+    .port-output { background: #F44336; }
+    .port-bidirectional { background: #FF9800; }
+    
+    /* 端口标签 */
+    .port-label {
+      position: absolute;
+      font-size: 9px;
+      color: #666;
+      white-space: nowrap;
+      pointer-events: none;
+    }
+    
+    /* SVG 连线 */
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .edge {
+      fill: none;
+      stroke: #666;
+      stroke-width: 1.5;
+    }
+    .edge-energy { stroke: #FF5722; stroke-width: 2; }
+    .edge-signal { stroke: #2196F3; stroke-dasharray: 5,3; }
+    .edge-data { stroke: #4CAF50; }
+    
+    /* 箭头 */
+    .arrow-head {
+      fill: #666;
+    }
+    .arrow-head-energy { fill: #FF5722; }
+    .arrow-head-signal { fill: #2196F3; }
+    
+    /* 图例 */
+    .legend {
+      margin-top: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+    .legend-line {
+      width: 30px;
+      height: 2px;
+    }
+    
+    /* 控制面板 */
+    .controls {
+      margin-bottom: 15px;
+      padding: 15px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .controls button {
+      padding: 8px 16px;
+      margin-right: 10px;
+      border: none;
+      border-radius: 4px;
+      background: #2196F3;
+      color: white;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .controls button:hover {
+      background: #1976D2;
+    }
+  </style>
+</head>
+<body>
+  <h2>🔧 内部模块图 - 四区域布局（含端口连接）</h2>
+  
+  <div class="controls">
+    <button onclick="toggleLabels()">切换端口标签</button>
+    <button onclick="relayout()">重新布局</button>
+  </div>
+  
+  <div id="canvas-container">
+    <div id="canvas">
+    <svg id="edges">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" class="arrow-head"/>
+        </marker>
+        <marker id="arrow-energy" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" class="arrow-head-energy"/>
+        </marker>
+        <marker id="arrow-signal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+          <path d="M0,0 L0,6 L9,3 z" class="arrow-head-signal"/>
+        </marker>
+      </defs>
+    </svg>
+    </div>
+  </div>
+  
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #FF9800, #F57C00);"></div>
+      <span>顶部区域 - 动力电力系统</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #2196F3, #1565C0);"></div>
+      <span>对称区域 - 左右舷推进系统</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #4CAF50, #388E3C);"></div>
+      <span>右侧区域 - 发电系统</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-color" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);"></div>
+      <span>底部区域 - 配电系统</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background: #FF5722; height: 3px;"></div>
+      <span>能量流</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background: #2196F3; border-top: 2px dashed #2196F3; height: 0;"></div>
+      <span>信号流</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-line" style="background: #4CAF50; height: 2px;"></div>
+      <span>数据流</span>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    const elk = new ELK();
+    const canvas = document.getElementById('canvas');
+    let svg = document.getElementById('edges');
+    
+    // 画布尺寸
+    const CANVAS_WIDTH = 1400;
+    const CANVAS_HEIGHT = 550;
+    
+    // 布局配置 - 五行布局
+    const LAYOUT = {
+      row1: { y: 30, height: 70, label: '上 - 动力电力保障系统' },
+      row2: { y: 120, height: 80, label: '左舷 - 推进系统' },
+      row3: { y: 210, height: 80, label: '右舷 - 推进系统' },
+      row4: { y: 310, height: 80, label: '发电系统' },
+      row5: { y: 410, height: 100, label: '下 - 输配电系统' }
+    };
+    
+    // 模块定义 - 五行布局
+    const MODULES = [
+      // 第1行：动力电力保障系统（拉长，与第5行同宽）
+      { id: 'power_main', row: 1, x: 50, width: 1300, height: 50, label: '动力电力保障系统', class: 'module-top', ports: [
+        { id: 'p_main_out1', side: 'bottom', type: 'output', label: '电能输出1' },
+        { id: 'p_main_out2', side: 'bottom', type: 'output', label: '电能输出2' },
+        { id: 'p_main_out3', side: 'bottom', type: 'output', label: '电能输出3' },
+        { id: 'p_main_in1', side: 'top', type: 'input', label: '外部输入' }
+      ]},
+      
+      // 第2行：左舷推进系统
+      { id: 'left_prop', row: 2, x: 50, width: 120, height: 50, label: '左舷推进电机', class: 'module-sym-left', ports: [
+        { id: 'pl_prop_in', side: 'left', type: 'input', label: '机械能入' },
+        { id: 'pl_prop_out', side: 'right', type: 'output', label: '机械能出' },
+        { id: 'pl_prop_pwr', side: 'top', type: 'input', label: '电能' }
+      ]},
+      { id: 'left_gear', row: 2, x: 200, width: 100, height: 50, label: '左舷减速齿轮', class: 'module-sym-left', ports: [
+        { id: 'pl_gear_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pl_gear_out', side: 'right', type: 'output', label: '出' }
+      ]},
+      { id: 'left_shaft', row: 2, x: 330, width: 100, height: 50, label: '左舷轴系', class: 'module-sym-left', ports: [
+        { id: 'pl_shaft_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pl_shaft_out', side: 'right', type: 'output', label: '出' }
+      ]},
+      { id: 'left_rudder', row: 2, x: 460, width: 100, height: 50, label: '左舷舵机', class: 'module-sym-left', ports: [
+        { id: 'pl_rudder_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pl_rudder_ctl', side: 'top', type: 'bidirectional', label: '控制' }
+      ]},
+      
+      // 第3行：右舷推进系统（与左舷X轴对称）
+      { id: 'right_prop', row: 3, x: 50, width: 120, height: 50, label: '右舷推进电机', class: 'module-sym-right', ports: [
+        { id: 'pr_prop_in', side: 'left', type: 'input', label: '机械能入' },
+        { id: 'pr_prop_out', side: 'right', type: 'output', label: '机械能出' },
+        { id: 'pr_prop_pwr', side: 'bottom', type: 'input', label: '电能' }
+      ]},
+      { id: 'right_gear', row: 3, x: 200, width: 100, height: 50, label: '右舷减速齿轮', class: 'module-sym-right', ports: [
+        { id: 'pr_gear_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pr_gear_out', side: 'right', type: 'output', label: '出' }
+      ]},
+      { id: 'right_shaft', row: 3, x: 330, width: 100, height: 50, label: '右舷轴系', class: 'module-sym-right', ports: [
+        { id: 'pr_shaft_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pr_shaft_out', side: 'right', type: 'output', label: '出' }
+      ]},
+      { id: 'right_rudder', row: 3, x: 460, width: 100, height: 50, label: '右舷舵机', class: 'module-sym-right', ports: [
+        { id: 'pr_rudder_in', side: 'left', type: 'input', label: '入' },
+        { id: 'pr_rudder_ctl', side: 'bottom', type: 'bidirectional', label: '控制' }
+      ]},
+      
+      // 第4行：发电系统（横向布局，所有绿色模块在一行）
+      { id: 'gen_1', row: 4, x: 600, width: 140, height: 50, label: '柴油发电机-1', class: 'module-right', ports: [
+        { id: 'g1_fuel', side: 'top', type: 'input', label: '燃油' },
+        { id: 'g1_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g1_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+      ]},
+      { id: 'gen_2', row: 4, x: 760, width: 140, height: 50, label: '柴油发电机-2', class: 'module-right', ports: [
+        { id: 'g2_fuel', side: 'top', type: 'input', label: '燃油' },
+        { id: 'g2_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g2_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+      ]},
+      { id: 'gen_3', row: 4, x: 920, width: 140, height: 50, label: '柴油发电机-3', class: 'module-right', ports: [
+        { id: 'g3_fuel', side: 'top', type: 'input', label: '燃油' },
+        { id: 'g3_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g3_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+      ]},
+      { id: 'gen_4', row: 4, x: 1080, width: 140, height: 50, label: '柴油发电机-4', class: 'module-right', ports: [
+        { id: 'g4_fuel', side: 'top', type: 'input', label: '燃油' },
+        { id: 'g4_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g4_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+      ]},
+      { id: 'aux_gen', row: 4, x: 1240, width: 110, height: 50, label: '辅助发电', class: 'module-right', ports: [
+        { id: 'aux_pwr', side: 'left', type: 'output', label: '辅助电' },
+        { id: 'aux_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+      ]},
+      
+      // 第5行：配电系统（一行，与第1行同宽）
+    { id: 'power_main2', row: 5, x: 50, width: 1300, height: 50, label: '配电系统', class: 'module-top', ports: [
+        { id: 'p_main2_out1', side: 'bottom', type: 'output', label: '电能输出1' },
+        { id: 'p_main2_out2', side: 'bottom', type: 'output', label: '电能输出2' },
+        { id: 'p_main2_out3', side: 'bottom', type: 'output', label: '电能输出3' },
+        { id: 'p_main2_in1', side: 'top', type: 'input', label: '外部输入' }
+      ]},
+    ];
+    
+    // 连接定义
+    const CONNECTIONS = [
+      // 顶部到对称区域 - 电能流
+      { from: 'p_main_out1', to: 'pl_prop_pwr', type: 'energy', label: '推进电能' },
+      { from: 'p_main_out2', to: 'pr_prop_pwr', type: 'energy', label: '推进电能' },
+      { from: 'p_main_out3', to: 'lc_in', type: 'energy', label: '主电能' },
+      
+      // 左舷系统内部连接
+      { from: 'pl_prop_out', to: 'pl_gear_in', type: 'energy', label: '' },
+      { from: 'pl_gear_out', to: 'pl_shaft_in', type: 'energy', label: '' },
+      { from: 'pl_shaft_out', to: 'pl_rudder_in', type: 'energy', label: '' },
+      
+      // 右舷系统内部连接
+      { from: 'pr_prop_out', to: 'pr_gear_in', type: 'energy', label: '' },
+      { from: 'pr_gear_out', to: 'pr_shaft_in', type: 'energy', label: '' },
+      { from: 'pr_shaft_out', to: 'pr_rudder_in', type: 'energy', label: '' },
+    ];
+    
+    let showLabels = true;
+    let portPositions = {};
+    
+    function init() {
+      canvas.style.width = CANVAS_WIDTH + 'px';
+      canvas.style.height = CANVAS_HEIGHT + 'px';
+      render();
+    }
+    
+    function render() {
+      // 清空
+      canvas.innerHTML = '<svg id="edges"><defs><marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" class="arrow-head"/></marker><marker id="arrow-energy" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" class="arrow-head-energy"/></marker><marker id="arrow-signal" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" class="arrow-head-signal"/></marker></defs></svg>';
+      svg = document.getElementById('edges');
+      window.edgesSvg = svg;
+      portPositions = {};
+      
+      // 绘制行标签
+      Object.keys(LAYOUT).forEach(key => {
+        const row = LAYOUT[key];
+        const labelEl = document.createElement('div');
+        labelEl.className = 'region-label';
+        labelEl.textContent = row.label;
+        labelEl.style.left = '10px';
+        labelEl.style.top = (row.y - 15) + 'px';
+        canvas.appendChild(labelEl);
+      });
+      
+      // 绘制模块和端口
+      MODULES.forEach(mod => {
+        // 根据行计算Y坐标
+        const row = LAYOUT['row' + mod.row];
+        const absX = mod.x;
+        const absY = row.y + (row.height - mod.height) / 2;
+        
+        // 模块
+        const modEl = document.createElement('div');
+        modEl.className = `module ${mod.class}`;
+        modEl.style.left = absX + 'px';
+        modEl.style.top = absY + 'px';
+        modEl.style.width = mod.width + 'px';
+        modEl.style.height = mod.height + 'px';
+        modEl.textContent = mod.label;
+        modEl.id = mod.id;
+        canvas.appendChild(modEl);
+        
+        // 端口
+        if (mod.ports) {
+          mod.ports.forEach(port => {
+            const portEl = document.createElement('div');
+            portEl.className = `port port-${port.type}`;
+            portEl.id = port.id;
+            
+            let portX = absX;
+            let portY = absY;
+                    
+            switch(port.side) {
+              case 'top':
+                portX += mod.width / 2 - 5;
+                portY -= 5;
+                break;
+              case 'bottom':
+                portX += mod.width / 2 - 5;
+                portY += mod.height - 5;
+                break;
+              case 'left':
+                portX -= 5;
+                portY += mod.height / 2 - 5;
+                break;
+              case 'right':
+                portX += mod.width - 5;
+                portY += mod.height / 2 - 5;
+                break;
+            }
+                    
+            portEl.style.left = portX + 'px';
+            portEl.style.top = portY + 'px';
+            portEl.title = port.label;
+            canvas.appendChild(portEl);
+            
+            portPositions[port.id] = { x: portX + 5, y: portY + 5 };
+            
+            // 端口标签
+            if (showLabels) {
+              const labelEl = document.createElement('div');
+              labelEl.className = 'port-label';
+              labelEl.textContent = port.label;
+              
+              let labelX = portX;
+              let labelY = portY;
+              
+              switch(port.side) {
+                case 'top':
+                  labelX += 15;
+                  labelY -= 10;
+                  break;
+                case 'bottom':
+                  labelX += 15;
+                  labelY += 15;
+                  break;
+                case 'left':
+                  labelX -= 40;
+                  labelY -= 5;
+                  break;
+                case 'right':
+                  labelX += 15;
+                  labelY -= 5;
+                  break;
+              }
+              
+              labelEl.style.left = labelX + 'px';
+              labelEl.style.top = labelY + 'px';
+              canvas.appendChild(labelEl);
+            }
+          });
+        }
+      });
+      
+      // 绘制连线
+      CONNECTIONS.forEach((conn, idx) => {
+        const from = portPositions[conn.from];
+        const to = portPositions[conn.to];
+        
+        if (from && to) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.classList.add('edge');
+          
+          if (conn.type === 'energy') {
+            path.classList.add('edge-energy');
+            path.setAttribute('marker-end', 'url(#arrow-energy)');
+          } else if (conn.type === 'signal') {
+            path.classList.add('edge-signal');
+            path.setAttribute('marker-end', 'url(#arrow-signal)');
+          } else {
+            path.setAttribute('marker-end', 'url(#arrow)');
+          }
+          
+          // 计算路径（使用正交路由）
+          const d = calculateOrthogonalPath(from.x, from.y, to.x, to.y);
+          path.setAttribute('d', d);
+          
+          svg.appendChild(path);
+        }
+      });
+    }
+    
+    function calculateOrthogonalPath(x1, y1, x2, y2) {
+      const midX = (x1 + x2) / 2;
+      const midY = (y1 + y2) / 2;
+      
+      // 判断方向
+      const dx = Math.abs(x2 - x1);
+      const dy = Math.abs(y2 - y1);
+      
+      if (dx > dy) {
+        // 水平主导
+        return `M${x1},${y1} L${midX},${y1} L${midX},${y2} L${x2},${y2}`;
+      } else {
+        // 垂直主导
+        return `M${x1},${y1} L${x1},${midY} L${x2},${midY} L${x2},${y2}`;
+      }
+    }
+    
+
+    
+    function toggleLabels() {
+      showLabels = !showLabels;
+      render();
+    }
+    
+    function relayout() {
+      // 使用 ELK 重新布局
+      const graph = createElkGraph();
+      
+      elk.layout(graph).then(result => {
+        // 更新模块位置
+        result.children.forEach(child => {
+          const mod = MODULES.find(m => m.id === child.id);
+          if (mod) {
+            mod.x = child.x;
+            mod.y = child.y;
+          }
+        });
+        render();
+      });
+    }
+    
+    function createElkGraph() {
+      return {
+        id: 'root',
+        layoutOptions: {
+          'elk.algorithm': 'layered',
+          'elk.direction': 'DOWN',
+          'elk.spacing.nodeNode': 30,
+          'elk.layered.spacing.nodeNodeBetweenLayers': 50
+        },
+        children: MODULES.map(m => ({
+          id: m.id,
+          width: m.width,
+          height: m.height
+        })),
+        edges: CONNECTIONS.map((c, i) => ({
+          id: `e${i}`,
+          sources: [c.from.split('_')[0]],
+          targets: [c.to.split('_')[0]]
+        }))
+      };
+    }
+    
+    // 初始化
+    window.addEventListener('load', init);
+  </script>
+</body>
+</html>
