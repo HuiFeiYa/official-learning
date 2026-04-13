@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ELKJS 灵活布局 - 通用位置计算器</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f5f5f5;
+    }
+    .main-container {
+      display: flex;
+      gap: 20px;
+    }
+    .canvas-area {
+      flex: 1;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      position: relative;
+      background: #f9f9f9;
+      overflow: hidden;
+    }
+    .node {
+      position: absolute;
+      background: #4CAF50;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 12px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      font-weight: bold;
+      transition: all 0.3s ease;
+    }
+    .node.layer-1 { background: #2196F3; }
+    .node.layer-2 { background: #FF9800; }
+    .node.layer-3 { background: #9C27B0; }
+    .node.layer-4 { background: #F44336; }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #666;
+      stroke-width: 2;
+      fill: none;
+    }
+    .control-panel {
+      width: 380px;
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .control-panel h3 {
+      margin: 0 0 15px 0;
+      color: #333;
+      border-bottom: 2px solid #4CAF50;
+      padding-bottom: 10px;
+    }
+    .control-group {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 6px;
+    }
+    .control-group h4 {
+      margin: 0 0 12px 0;
+      color: #555;
+      font-size: 14px;
+    }
+    .form-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      align-items: center;
+    }
+    .form-row label {
+      width: 100px;
+      font-size: 13px;
+      color: #666;
+    }
+    .form-row input[type="number"],
+    .form-row select {
+      flex: 1;
+      padding: 6px 10px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .form-row input[type="range"] {
+      flex: 1;
+    }
+    .range-value {
+      width: 50px;
+      text-align: right;
+      font-size: 13px;
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .layer-config {
+      margin-bottom: 15px;
+      padding: 12px;
+      background: white;
+      border-radius: 4px;
+      border-left: 4px solid #4CAF50;
+    }
+    .layer-config h5 {
+      margin: 0 0 10px 0;
+      color: #333;
+      font-size: 13px;
+    }
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: background 0.2s;
+    }
+    .btn-primary {
+      background: #4CAF50;
+      color: white;
+      width: 100%;
+    }
+    .btn-primary:hover {
+      background: #45a049;
+    }
+    .btn-secondary {
+      background: #2196F3;
+      color: white;
+      margin-top: 10px;
+      width: 100%;
+    }
+    .info-box {
+      margin-top: 15px;
+      padding: 12px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+    .info-box code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-family: 'Consolas', monospace;
+    }
+    .origin-marker {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #F44336;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 100;
+      box-shadow: 0 0 0 4px rgba(244, 67, 54, 0.3);
+    }
+    .origin-label {
+      position: absolute;
+      font-size: 11px;
+      color: #F44336;
+      font-weight: bold;
+      margin-left: 15px;
+      margin-top: -5px;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h2>ELKJS 灵活布局 - 通用位置计算器</h2>
+  
+  <div class="main-container">
+    <div class="canvas-area">
+      <div id="canvas">
+        <svg id="edges"></svg>
+        <div class="origin-marker" id="originMarker"></div>
+        <div class="origin-label" id="originLabel">起始点 (originX, originY)</div>
+      </div>
+    </div>
+    
+    <div class="control-panel">
+      <h3>⚙️ 布局参数配置</h3>
+      
+      <div class="control-group">
+        <h4>画布设置</h4>
+        <div class="form-row">
+          <label>画布宽度</label>
+          <input type="range" id="canvasWidth" min="400" max="1200" value="800">
+          <span class="range-value" id="canvasWidthVal">800</span>
+        </div>
+        <div class="form-row">
+          <label>画布高度</label>
+          <input type="range" id="canvasHeight" min="300" max="800" value="500">
+          <span class="range-value" id="canvasHeightVal">500</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <h4>起始点 (Origin)</h4>
+        <div class="form-row">
+          <label>originX</label>
+          <input type="range" id="originX" min="0" max="400" value="100">
+          <span class="range-value" id="originXVal">100</span>
+        </div>
+        <div class="form-row">
+          <label>originY</label>
+          <input type="range" id="originY" min="0" max="200" value="50">
+          <span class="range-value" id="originYVal">50</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <h4>节点尺寸</h4>
+        <div class="form-row">
+          <label>宽节点宽度</label>
+          <input type="range" id="wideNodeWidth" min="200" max="800" value="600">
+          <span class="range-value" id="wideNodeWidthVal">600</span>
+        </div>
+        <div class="form-row">
+          <label>小节点宽度</label>
+          <input type="range" id="smallNodeWidth" min="50" max="200" value="100">
+          <span class="range-value" id="smallNodeWidthVal">100</span>
+        </div>
+        <div class="form-row">
+          <label>节点高度</label>
+          <input type="range" id="nodeHeight" min="30" max="100" value="50">
+          <span class="range-value" id="nodeHeightVal">50</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <h4>间距设置</h4>
+        <div class="form-row">
+          <label>层间距</label>
+          <input type="range" id="layerSpacing" min="50" max="200" value="100">
+          <span class="range-value" id="layerSpacingVal">100</span>
+        </div>
+        <div class="form-row">
+          <label>节点间距</label>
+          <input type="range" id="nodeSpacing" min="10" max="100" value="20">
+          <span class="range-value" id="nodeSpacingVal">20</span>
+        </div>
+      </div>
+      
+      <div class="control-group">
+        <h4>各层对齐配置</h4>
+        
+        <div class="layer-config">
+          <h5>第 1 层 (宽节点)</h5>
+          <div class="form-row">
+            <label>对齐方式</label>
+            <select id="layer1Align">
+              <option value="left">靠左 (left)</option>
+              <option value="center" selected>居中 (center)</option>
+              <option value="right">靠右 (right)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>padding</label>
+            <input type="number" id="layer1Padding" value="0" min="0" max="200">
+          </div>
+        </div>
+        
+        <div class="layer-config">
+          <h5>第 2 层 (小节点)</h5>
+          <div class="form-row">
+            <label>对齐方式</label>
+            <select id="layer2Align">
+              <option value="left" selected>靠左 (left)</option>
+              <option value="center">居中 (center)</option>
+              <option value="right">靠右 (right)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>padding</label>
+            <input type="number" id="layer2Padding" value="0" min="0" max="200">
+          </div>
+        </div>
+        
+        <div class="layer-config">
+          <h5>第 3 层 (小节点)</h5>
+          <div class="form-row">
+            <label>对齐方式</label>
+            <select id="layer3Align">
+              <option value="left">靠左 (left)</option>
+              <option value="center">居中 (center)</option>
+              <option value="right" selected>靠右 (right)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>padding</label>
+            <input type="number" id="layer3Padding" value="0" min="0" max="200">
+          </div>
+        </div>
+        
+        <div class="layer-config">
+          <h5>第 4 层 (宽节点)</h5>
+          <div class="form-row">
+            <label>对齐方式</label>
+            <select id="layer4Align">
+              <option value="left">靠左 (left)</option>
+              <option value="center" selected>居中 (center)</option>
+              <option value="right">靠右 (right)</option>
+            </select>
+          </div>
+          <div class="form-row">
+            <label>padding</label>
+            <input type="number" id="layer4Padding" value="0" min="0" max="200">
+          </div>
+        </div>
+      </div>
+      
+      <button class="btn btn-primary" onclick="updateLayout()">🔄 更新布局</button>
+      <button class="btn btn-secondary" onclick="resetToDefault()">↩️ 重置默认</button>
+      
+      <div class="info-box">
+        <strong>💡 通用计算方法说明：</strong><br>
+        所有层的计算都基于 <code>originX</code> 作为参考点：<br><br>
+        • <strong>靠左对齐：</strong><code>x = originX + padding + nodeIndex * (width + spacing)</code><br>
+        • <strong>居中对齐：</strong><code>x = originX + (referenceWidth - nodeWidth) / 2</code><br>
+        • <strong>靠右对齐：</strong><code>x = originX + referenceWidth - padding - totalWidth + nodeIndex * (width + spacing)</code><br><br>
+        其中 <code>referenceWidth</code> 是第1层节点的宽度，作为后续层的参考基准。
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    // ==================== 通用位置计算器 ====================
+    
+    /**
+     * 计算节点在指定层级的 x 坐标
+     * @param {Object} options - 配置选项
+     * @param {number} options.layer - 层级 (1, 2, 3, 4...)
+     * @param {number} options.nodeIndex - 节点在层内的索引 (0, 1, 2...)
+     * @param {number} options.nodeWidth - 当前节点宽度
+     * @param {number} options.originX - 起始点 X 坐标
+     * @param {number} options.originY - 起始点 Y 坐标
+     * @param {number} options.referenceWidth - 参考宽度（通常是第1层节点宽度）
+     * @param {string} options.align - 对齐方式: 'left' | 'center' | 'right'
+     * @param {number} options.padding - 内边距
+     * @param {number} options.nodeSpacing - 节点间距
+     * @param {number} options.siblingsCount - 同层节点数量
+     * @returns {Object} { x, y } 坐标
+     */
+    function calculateNodePosition(options) {
+      const {
+        layer,
+        nodeIndex,
+        nodeWidth,
+        originX,
+        originY,
+        referenceWidth,
+        align = 'center',
+        padding = 0,
+        nodeSpacing = 20,
+        siblingsCount = 1,
+        layerSpacing = 100
+      } = options;
+      
+      let x;
+      const totalNodesWidth = siblingsCount * nodeWidth + (siblingsCount - 1) * nodeSpacing;
+      
+      switch (align) {
+        case 'left':
+          // 靠左对齐：从 originX + padding 开始
+          x = originX + padding + nodeIndex * (nodeWidth + nodeSpacing);
+          break;
+          
+        case 'center':
+          // 居中对齐：基于 referenceWidth 居中
+          x = originX + (referenceWidth - nodeWidth) / 2;
+          break;
+          
+        case 'right':
+          // 靠右对齐：从右侧往左排
+          x = originX + referenceWidth - padding - totalNodesWidth + nodeIndex * (nodeWidth + nodeSpacing);
+          break;
+          
+        default:
+          x = originX + (referenceWidth - nodeWidth) / 2;
+      }
+      
+      // Y 坐标基于层级计算
+      const y = originY + (layer - 1) * layerSpacing;
+      
+      return { x, y };
+    }
+    
+    /**
+     * 批量计算所有节点的位置
+     * @param {Array} nodes - 节点数组，每个节点包含 id, width, height, layer
+     * @param {Object} config - 全局配置
+     * @returns {Object} 节点位置映射 { nodeId: { x, y, width, height } }
+     */
+    function calculateAllPositions(nodes, config) {
+      const {
+        originX,
+        originY,
+        layerSpacing,
+        nodeSpacing,
+        layerConfigs // 每层配置: { [layer]: { align, padding } }
+      } = config;
+      
+      // 按层级分组
+      const layerGroups = {};
+      nodes.forEach(node => {
+        const layer = node.layer || parseInt(node.id.split('_')[0].replace('layer', ''));
+        if (!layerGroups[layer]) layerGroups[layer] = [];
+        layerGroups[layer].push(node);
+      });
+      
+      // 获取第1层节点的宽度作为参考宽度
+      const firstLayerNodes = layerGroups[1] || [];
+      const referenceWidth = firstLayerNodes.length > 0 
+        ? Math.max(...firstLayerNodes.map(n => n.width))
+        : 600;
+      
+      const positions = {};
+      
+      Object.keys(layerGroups).forEach(layerStr => {
+        const layer = parseInt(layerStr);
+        const layerNodes = layerGroups[layer];
+        const layerConfig = layerConfigs[layer] || { align: 'center', padding: 0 };
+        
+        layerNodes.forEach((node, index) => {
+          const pos = calculateNodePosition({
+            layer,
+            nodeIndex: index,
+            nodeWidth: node.width,
+            originX,
+            originY,
+            referenceWidth,
+            align: layerConfig.align,
+            padding: layerConfig.padding,
+            nodeSpacing,
+            siblingsCount: layerNodes.length,
+            layerSpacing
+          });
+          
+          positions[node.id] = {
+            x: pos.x,
+            y: pos.y,
+            width: node.width,
+            height: node.height,
+            layer
+          };
+        });
+      });
+      
+      return positions;
+    }
+    
+    // ==================== 应用逻辑 ====================
+    
+    const elk = new ELK();
+    
+    function getConfig() {
+      const canvasWidth = parseInt(document.getElementById('canvasWidth').value);
+      const canvasHeight = parseInt(document.getElementById('canvasHeight').value);
+      const originX = parseInt(document.getElementById('originX').value);
+      const originY = parseInt(document.getElementById('originY').value);
+      const wideNodeWidth = parseInt(document.getElementById('wideNodeWidth').value);
+      const smallNodeWidth = parseInt(document.getElementById('smallNodeWidth').value);
+      const nodeHeight = parseInt(document.getElementById('nodeHeight').value);
+      const layerSpacing = parseInt(document.getElementById('layerSpacing').value);
+      const nodeSpacing = parseInt(document.getElementById('nodeSpacing').value);
+      
+      const layerConfigs = {
+        1: { align: document.getElementById('layer1Align').value, padding: parseInt(document.getElementById('layer1Padding').value) },
+        2: { align: document.getElementById('layer2Align').value, padding: parseInt(document.getElementById('layer2Padding').value) },
+        3: { align: document.getElementById('layer3Align').value, padding: parseInt(document.getElementById('layer3Padding').value) },
+        4: { align: document.getElementById('layer4Align').value, padding: parseInt(document.getElementById('layer4Padding').value) }
+      };
+      
+      return {
+        canvasWidth,
+        canvasHeight,
+        originX,
+        originY,
+        wideNodeWidth,
+        smallNodeWidth,
+        nodeHeight,
+        layerSpacing,
+        nodeSpacing,
+        layerConfigs
+      };
+    }
+    
+    function createGraph(config) {
+      const { wideNodeWidth, smallNodeWidth, nodeHeight, nodeSpacing, layerSpacing } = config;
+      
+      return {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": nodeSpacing,
+          "elk.layered.spacing.nodeNodeBetweenLayers": layerSpacing
+        },
+        children: [
+          { id: "layer1_node1", width: wideNodeWidth, height: nodeHeight, layer: 1 },
+          { id: "layer2_node1", width: smallNodeWidth, height: nodeHeight, layer: 2 },
+          { id: "layer2_node2", width: smallNodeWidth, height: nodeHeight, layer: 2 },
+          { id: "layer3_node1", width: smallNodeWidth, height: nodeHeight, layer: 3 },
+          { id: "layer3_node2", width: smallNodeWidth, height: nodeHeight, layer: 3 },
+          { id: "layer4_node1", width: wideNodeWidth, height: nodeHeight, layer: 4 }
+        ],
+        edges: [
+          { id: "e1", sources: ["layer1_node1"], targets: ["layer2_node1"] },
+          { id: "e2", sources: ["layer1_node1"], targets: ["layer2_node2"] },
+          { id: "e3", sources: ["layer2_node1"], targets: ["layer3_node1"] },
+          { id: "e4", sources: ["layer2_node2"], targets: ["layer3_node2"] },
+          { id: "e5", sources: ["layer3_node1"], targets: ["layer4_node1"] },
+          { id: "e6", sources: ["layer3_node2"], targets: ["layer4_node1"] }
+        ]
+      };
+    }
+    
+    function render(config, positions, edges) {
+      const canvas = document.getElementById('canvas');
+      const svg = document.getElementById('edges');
+      
+      // 更新画布尺寸
+      canvas.style.width = config.canvasWidth + 'px';
+      canvas.style.height = config.canvasHeight + 'px';
+      
+      // 清除现有节点（保留 SVG 和原点标记）
+      const existingNodes = canvas.querySelectorAll('.node');
+      existingNodes.forEach(n => n.remove());
+      svg.innerHTML = '';
+      
+      // 更新原点标记位置
+      const originMarker = document.getElementById('originMarker');
+      const originLabel = document.getElementById('originLabel');
+      originMarker.style.left = config.originX + 'px';
+      originMarker.style.top = config.originY + 'px';
+      originLabel.style.left = config.originX + 'px';
+      originLabel.style.top = config.originY + 'px';
+      originLabel.textContent = `起始点 (${config.originX}, ${config.originY})`;
+      
+      // 渲染节点
+      Object.keys(positions).forEach(nodeId => {
+        const pos = positions[nodeId];
+        const nodeEl = document.createElement('div');
+        nodeEl.className = `node layer-${pos.layer}`;
+        nodeEl.style.left = pos.x + 'px';
+        nodeEl.style.top = pos.y + 'px';
+        nodeEl.style.width = pos.width + 'px';
+        nodeEl.style.height = pos.height + 'px';
+        nodeEl.textContent = nodeId.replace('layer', 'L').replace('_node', 'N');
+        canvas.appendChild(nodeEl);
+      });
+      
+      // 渲染边
+      edges.forEach(e => {
+        const source = positions[e.sources[0]];
+        const target = positions[e.targets[0]];
+        
+        if (source && target) {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge');
+          
+          const startX = source.x + source.width / 2;
+          const startY = source.y + source.height;
+          const endX = target.x + target.width / 2;
+          const endY = target.y;
+          const midY = (startY + endY) / 2;
+          
+          path.setAttribute('d', `M${startX} ${startY} L${startX} ${midY} L${endX} ${midY} L${endX} ${endY}`);
+          svg.appendChild(path);
+        }
+      });
+    }
+    
+    function updateLayout() {
+      const config = getConfig();
+      const graph = createGraph(config);
+      
+      elk.layout(graph).then((result) => {
+        // 使用通用计算器计算位置
+        const positions = calculateAllPositions(graph.children, {
+          originX: config.originX,
+          originY: config.originY,
+          layerSpacing: config.layerSpacing,
+          nodeSpacing: config.nodeSpacing,
+          layerConfigs: config.layerConfigs
+        });
+        
+        render(config, positions, result.edges);
+      });
+    }
+    
+    function resetToDefault() {
+      document.getElementById('canvasWidth').value = 800;
+      document.getElementById('canvasHeight').value = 500;
+      document.getElementById('originX').value = 100;
+      document.getElementById('originY').value = 50;
+      document.getElementById('wideNodeWidth').value = 600;
+      document.getElementById('smallNodeWidth').value = 100;
+      document.getElementById('nodeHeight').value = 50;
+      document.getElementById('layerSpacing').value = 100;
+      document.getElementById('nodeSpacing').value = 20;
+      
+      document.getElementById('layer1Align').value = 'center';
+      document.getElementById('layer1Padding').value = 0;
+      document.getElementById('layer2Align').value = 'left';
+      document.getElementById('layer2Padding').value = 0;
+      document.getElementById('layer3Align').value = 'right';
+      document.getElementById('layer3Padding').value = 0;
+      document.getElementById('layer4Align').value = 'center';
+      document.getElementById('layer4Padding').value = 0;
+      
+      updateRangeValues();
+      updateLayout();
+    }
+    
+    function updateRangeValues() {
+      document.querySelectorAll('input[type="range"]').forEach(input => {
+        const valEl = document.getElementById(input.id + 'Val');
+        if (valEl) valEl.textContent = input.value;
+      });
+    }
+    
+    // 绑定 range 输入事件
+    document.querySelectorAll('input[type="range"]').forEach(input => {
+      input.addEventListener('input', function() {
+        const valEl = document.getElementById(this.id + 'Val');
+        if (valEl) valEl.textContent = this.value;
+      });
+    });
+    
+    // 初始化
+    window.addEventListener('load', function() {
+      updateRangeValues();
+      updateLayout();
+    });
+  </script>
+</body>
+</html>

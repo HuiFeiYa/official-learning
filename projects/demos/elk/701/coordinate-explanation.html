@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ELKJS 坐标解析</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    .container {
+      display: flex;
+      gap: 20px;
+    }
+    .canvas-wrapper {
+      flex: 1;
+    }
+    h3 {
+      margin: 0 0 10px 0;
+      color: #333;
+    }
+    .canvas {
+      border: 1px solid #ccc;
+      position: relative;
+      width: 400px;
+      height: 350px;
+      background: #f9f9f9;
+    }
+    .node {
+      position: absolute;
+      background: #4CAF50;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 10px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      font-weight: bold;
+    }
+    .node.elk-original {
+      background: #FF5722;
+      opacity: 0.7;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #666;
+      stroke-width: 1.5;
+      fill: none;
+    }
+    .edge.elk-original {
+      stroke: #FF5722;
+      stroke-dasharray: 4;
+    }
+    .console {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 15px;
+      border-radius: 4px;
+      font-family: 'Consolas', monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    .console .title {
+      color: #569cd6;
+      font-weight: bold;
+    }
+    .console .elk-coord {
+      color: #ce9178;
+    }
+    .console .final-coord {
+      color: #4ec9b0;
+    }
+    .console .comment {
+      color: #6a9955;
+    }
+    .explanation {
+      background: #fff3e0;
+      padding: 15px;
+      border-radius: 4px;
+      margin-top: 20px;
+      border-left: 4px solid #ff9800;
+    }
+    .explanation h4 {
+      margin: 0 0 10px 0;
+      color: #e65100;
+    }
+    .explanation ul {
+      margin: 0;
+      padding-left: 20px;
+    }
+    .explanation li {
+      margin: 5px 0;
+    }
+    .explanation code {
+      background: #fff;
+      padding: 2px 6px;
+      border-radius: 3px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <h2>ELKJS 坐标解析：原始坐标 vs 业务坐标</h2>
+  
+  <div class="container">
+    <div class="canvas-wrapper">
+      <h3>🔴 ELK 原始坐标（橙色虚线）</h3>
+      <div class="canvas" id="canvas-elk"></div>
+    </div>
+    <div class="canvas-wrapper">
+      <h3>🟢 业务调整后坐标（绿色实线）</h3>
+      <div class="canvas" id="canvas-final"></div>
+    </div>
+  </div>
+
+  <div class="console" id="console"></div>
+
+  <div class="explanation">
+    <h4>问题解答</h4>
+    <ul>
+      <li><strong>问题1：ELK 直接得到的坐标是什么？</strong><br>
+        ELK 返回的坐标是基于<strong>紧凑布局算法</strong>计算的，它会自动居中每一层的节点，使整体布局紧凑美观。但它不知道你的业务需求（如"靠左对齐"、"靠右对齐"）。
+      </li>
+      <li><strong>问题2：为什么不能让 ELK 直接得到想要的位置？</strong><br>
+        ELK 的布局算法是通用的，它只关心：<br>
+        - 节点不重叠<br>
+        - 边不交叉（尽可能）<br>
+        - 布局紧凑<br>
+        它不支持"某层靠左、某层靠右"这种业务级对齐需求，需要后处理。
+      </li>
+      <li><strong>问题3：后面的计算逻辑是什么？</strong><br>
+        根据节点所属层级和业务对齐规则，重新计算 x 坐标：
+        <ul>
+          <li>层级 1/4：居中对齐 → <code>x = (canvasWidth - nodeWidth) / 2</code></li>
+          <li>层级 2：靠左对齐 → <code>x = leftMargin + nodeIndex * (nodeWidth + spacing)</code></li>
+          <li>层级 3：靠右对齐 → <code>x = canvasWidth - rightMargin - totalWidth + nodeIndex * (nodeWidth + spacing)</code></li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      const ELK = window.ELK;
+      const elk = new ELK();
+
+      const canvasWidth = 400;
+      const wideNodeWidth = canvasWidth * 0.8;
+      const nodeHeight = 40;
+      const smallNodeWidth = 80;
+      const layerSpacing = 80;
+      const nodeSpacing = 15;
+
+      const graph = {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": nodeSpacing,
+          "elk.layered.spacing.nodeNodeBetweenLayers": layerSpacing
+        },
+        
+        children: [
+          { id: "layer1_node1", width: wideNodeWidth, height: nodeHeight },
+          { id: "layer2_node1", width: smallNodeWidth, height: nodeHeight },
+          { id: "layer2_node2", width: smallNodeWidth, height: nodeHeight },
+          { id: "layer3_node1", width: smallNodeWidth, height: nodeHeight },
+          { id: "layer3_node2", width: smallNodeWidth, height: nodeHeight },
+          { id: "layer4_node1", width: wideNodeWidth, height: nodeHeight }
+        ],
+        
+        edges: [
+          { id: "e1", sources: ["layer1_node1"], targets: ["layer2_node1"] },
+          { id: "e2", sources: ["layer1_node1"], targets: ["layer2_node2"] },
+          { id: "e3", sources: ["layer2_node1"], targets: ["layer3_node1"] },
+          { id: "e4", sources: ["layer2_node2"], targets: ["layer3_node2"] },
+          { id: "e5", sources: ["layer3_node1"], targets: ["layer4_node1"] },
+          { id: "e6", sources: ["layer3_node2"], targets: ["layer4_node1"] }
+        ]
+      };
+
+      function log(message, type = '') {
+        const consoleEl = document.getElementById('console');
+        const line = document.createElement('div');
+        line.className = type;
+        line.innerHTML = message;
+        consoleEl.appendChild(line);
+      }
+
+      function renderCanvas(containerId, nodes, edges, isElkOriginal) {
+        const canvas = document.getElementById(containerId);
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('id', containerId + '-svg');
+        canvas.innerHTML = '';
+        canvas.appendChild(svg);
+
+        nodes.forEach(n => {
+          const nodeEl = document.createElement('div');
+          nodeEl.className = 'node' + (isElkOriginal ? ' elk-original' : '');
+          nodeEl.style.left = n.x + 'px';
+          nodeEl.style.top = n.y + 'px';
+          nodeEl.style.width = n.width + 'px';
+          nodeEl.style.height = n.height + 'px';
+          nodeEl.textContent = n.id.replace('layer', 'L').replace('_node', 'N');
+          canvas.appendChild(nodeEl);
+        });
+
+        edges.forEach(e => {
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge' + (isElkOriginal ? ' elk-original' : ''));
+          path.setAttribute('d', e.path);
+          svg.appendChild(path);
+        });
+      }
+
+      function calculateBusinessPosition(node, canvasWidth, wideNodeWidth, smallNodeWidth, nodeSpacing) {
+        const layer = parseInt(node.id.split('_')[0].replace('layer', ''));
+        const nodeIndex = parseInt(node.id.split('_')[1].replace('node', '')) - 1;
+        const leftMargin = (canvasWidth - wideNodeWidth) / 2;
+        
+        let x;
+        if (layer === 1 || layer === 4) {
+          x = leftMargin;
+        } else if (layer === 2) {
+          x = leftMargin + nodeIndex * (smallNodeWidth + nodeSpacing);
+        } else if (layer === 3) {
+          const totalWidth = 2 * smallNodeWidth + nodeSpacing;
+          x = canvasWidth - leftMargin - totalWidth + nodeIndex * (smallNodeWidth + nodeSpacing);
+        }
+        
+        return x;
+      }
+
+      function generateEdgePath(source, target) {
+        const startX = source.x + source.width / 2;
+        const startY = source.y + source.height;
+        const endX = target.x + target.width / 2;
+        const endY = target.y;
+        const midY = (startY + endY) / 2;
+        return `M${startX} ${startY} L${startX} ${midY} L${endX} ${midY} L${endX} ${endY}`;
+      }
+
+      elk.layout(graph).then((result) => {
+        log('<span class="title">========== ELK 原始坐标 vs 业务坐标对比 ==========</span>');
+        log('<span class="comment">// 问题1：ELK 直接得到的坐标是什么？</span>');
+        log('<span class="comment">// ELK 基于紧凑布局算法，自动居中每层节点，使整体紧凑</span>');
+        log('');
+
+        const elkNodes = [];
+        const businessNodes = [];
+        const elkEdges = [];
+        const businessEdges = [];
+
+        result.children.forEach(n => {
+          const layer = parseInt(n.id.split('_')[0].replace('layer', ''));
+          const businessX = calculateBusinessPosition(n, canvasWidth, wideNodeWidth, smallNodeWidth, nodeSpacing);
+          
+          log(`<span class="title">${n.id}:</span>`);
+          log(`<span class="comment">  ELK原始坐标:</span> <span class="elk-coord">x=${n.x.toFixed(1)}, y=${n.y.toFixed(1)}</span>`);
+          log(`<span class="comment">  业务调整坐标:</span> <span class="final-coord">x=${businessX.toFixed(1)}, y=${n.y.toFixed(1)}</span>`);
+          
+          const diff = businessX - n.x;
+          if (Math.abs(diff) > 1) {
+            log(`<span class="comment">  偏移量:</span> ${diff > 0 ? '+' : ''}${diff.toFixed(1)}px (${layer === 2 ? '向左移动' : layer === 3 ? '向右移动' : '保持不变'})`);
+          }
+          log('');
+
+          elkNodes.push({ ...n, x: n.x, y: n.y });
+          businessNodes.push({ ...n, x: businessX, y: n.y });
+        });
+
+        log('<span class="comment">// 问题2：为什么不能让 ELK 直接得到想要的位置？</span>');
+        log('<span class="comment">// ELK 是通用布局引擎，只关心：节点不重叠、边不交叉、布局紧凑</span>');
+        log('<span class="comment">// 它不支持"某层靠左、某层靠右"这种业务级对齐需求</span>');
+        log('');
+
+        log('<span class="comment">// 问题3：计算逻辑（可抽离为业务方法）</span>');
+        log('<span class="comment">// 根据层级和对齐规则重新计算 x 坐标：</span>');
+        log('<span class="final-coord">  层级1/4: x = (canvasWidth - nodeWidth) / 2  // 居中</span>');
+        log('<span class="final-coord">  层级2:   x = leftMargin + nodeIndex * (nodeWidth + spacing)  // 靠左</span>');
+        log('<span class="final-coord">  层级3:   x = canvasWidth - leftMargin - totalWidth + nodeIndex * (nodeWidth + spacing)  // 靠右</span>');
+
+        result.edges.forEach(e => {
+          const sourceId = e.sources[0];
+          const targetId = e.targets[0];
+          
+          const elkSource = elkNodes.find(n => n.id === sourceId);
+          const elkTarget = elkNodes.find(n => n.id === targetId);
+          elkEdges.push({ path: generateEdgePath(elkSource, elkTarget) });
+
+          const businessSource = businessNodes.find(n => n.id === sourceId);
+          const businessTarget = businessNodes.find(n => n.id === targetId);
+          businessEdges.push({ path: generateEdgePath(businessSource, businessTarget) });
+        });
+
+        renderCanvas('canvas-elk', elkNodes, elkEdges, true);
+        renderCanvas('canvas-final', businessNodes, businessEdges, false);
+      });
+    });
+  </script>
+</body>
+</html>
