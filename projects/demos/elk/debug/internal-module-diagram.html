@@ -54,6 +54,7 @@
     .module-sym-right { background: linear-gradient(135deg, #03A9F4, #0288D1); }
     .module-right { background: linear-gradient(135deg, #4CAF50, #388E3C); }
     .module-bottom { background: linear-gradient(135deg, #9C27B0, #7B1FA2); }
+    .module-external { background: transparent; box-shadow: none; }
     
     /* 端口 - 方形 */
     .port {
@@ -184,36 +185,6 @@
     </div>
   </div>
   
-  <div class="legend">
-    <div class="legend-item">
-      <div class="legend-color" style="background: linear-gradient(135deg, #FF9800, #F57C00);"></div>
-      <span>顶部区域 - 动力电力系统</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background: linear-gradient(135deg, #2196F3, #1565C0);"></div>
-      <span>对称区域 - 左右舷推进系统</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background: linear-gradient(135deg, #4CAF50, #388E3C);"></div>
-      <span>右侧区域 - 发电系统</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-color" style="background: linear-gradient(135deg, #9C27B0, #7B1FA2);"></div>
-      <span>底部区域 - 配电系统</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-line" style="background: #FF5722; height: 3px;"></div>
-      <span>能量流</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-line" style="background: #2196F3; border-top: 2px dashed #2196F3; height: 0;"></div>
-      <span>信号流</span>
-    </div>
-    <div class="legend-item">
-      <div class="legend-line" style="background: #4CAF50; height: 2px;"></div>
-      <span>数据流</span>
-    </div>
-  </div>
 
   <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
   <script>
@@ -223,28 +194,42 @@
     
     // 画布尺寸
     const CANVAS_WIDTH = 1400;
-    const CANVAS_HEIGHT = 550;
+    const CANVAS_HEIGHT = 560;
     
-    // 布局配置 - 五行布局
+    // 布局配置 - 七行布局（包含第0行和第6行的外部节点）
     const LAYOUT = {
-      row1: { y: 30, height: 70, label: '上 - 动力电力保障系统' },
-      row2: { y: 120, height: 80, label: '左舷 - 推进系统' },
-      row3: { y: 210, height: 80, label: '右舷 - 推进系统' },
-      row4: { y: 310, height: 80, label: '发电系统' },
-      row5: { y: 410, height: 100, label: '下 - 输配电系统' }
+      row0: { y: 10, height: 20, label: '顶部外部节点' },
+      row1: { y: 50, height: 70, label: '上 - 动力电力保障系统' },
+      row2: { y: 140, height: 80, label: '左舷 - 推进系统' },
+      row3: { y: 230, height: 80, label: '右舷 - 推进系统' },
+      row4: { y: 330, height: 80, label: '发电系统' },
+      row5: { y: 430, height: 70, label: '下 - 输配电系统' },
+      row6: { y: 520, height: 20, label: '底部外部节点' }
     };
     
     // 模块定义 - 五行布局
     const MODULES = [
+      // 第0行：顶部外部输入节点（宽高为0，只有端口）
+      { id: 'external_top_node', row: 0, x: 700, width: 0, height: 0, label: '', class: 'module-external', ports: [
+        { id: 'external_top', side: 'bottom', type: 'input', label: '外部输入', offsetX: 0 }
+      ]},
+      
       // 第1行：动力电力保障系统（拉长，与第5行同宽）
       { id: 'power_main', row: 1, x: 50, width: 1300, height: 50, label: '动力电力保障系统', class: 'module-top', ports: [
-        { id: 'p_main_out1', side: 'bottom', type: 'output', label: '电能输出1' },
-        { id: 'p_main_out2', side: 'bottom', type: 'output', label: '电能输出2' },
-        { id: 'p_main_out3', side: 'bottom', type: 'output', label: '电能输出3' },
-        { id: 'p_main_in1', side: 'top', type: 'input', label: '外部输入' }
+        { id: 'p_main_out1', side: 'bottom', type: 'output', label: '电能输出1', offsetX: -300 },
+        { id: 'p_main_out2', side: 'bottom', type: 'output', label: '电能输出2', offsetX: -150 },
+        { id: 'p_main_out3', side: 'bottom', type: 'output', label: '电能输出3', offsetX: 0 },
+        { id: 'p_main_out4', side: 'bottom', type: 'output', label: '电能输出4', offsetX: 150 },
+        { id: 'p_main_out5', side: 'bottom', type: 'output', label: '电能输出5', offsetX: 300 },
+        { id: 'p_main_in1', side: 'top', type: 'input', label: '外部输入', offsetX: 0 }
       ]},
       
       // 第2行：左舷推进系统
+      {
+        id: "external_left_node", row: 2, x: 0, width: 1, height: 1, label: '', class: 'module-external', ports: [
+          { id: 'external_left', side: 'right', type: 'input', label: '', offsetX: 0 }
+        ]
+      },
       { id: 'left_prop', row: 2, x: 50, width: 120, height: 50, label: '左舷推进电机', class: 'module-sym-left', ports: [
         { id: 'pl_prop_in', side: 'left', type: 'input', label: '机械能入' },
         { id: 'pl_prop_out', side: 'right', type: 'output', label: '机械能出' },
@@ -264,6 +249,11 @@
       ]},
       
       // 第3行：右舷推进系统（与左舷X轴对称）
+         {
+        id: "external_left_node1", row: 3, x: 0, width: 1, height: 1, label: '', class: 'module-external', ports: [
+          { id: 'external_left1', side: 'right', type: 'input', label: '', offsetX: 0 }
+        ]
+      },
       { id: 'right_prop', row: 3, x: 50, width: 120, height: 50, label: '右舷推进电机', class: 'module-sym-right', ports: [
         { id: 'pr_prop_in', side: 'left', type: 'input', label: '机械能入' },
         { id: 'pr_prop_out', side: 'right', type: 'output', label: '机械能出' },
@@ -285,54 +275,97 @@
       // 第4行：发电系统（横向布局，所有绿色模块在一行）
       { id: 'gen_1', row: 4, x: 600, width: 140, height: 50, label: '柴油发电机-1', class: 'module-right', ports: [
         { id: 'g1_fuel', side: 'top', type: 'input', label: '燃油' },
-        { id: 'g1_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g1_out', side: 'bottom', type: 'output', label: '外部输出' },
         { id: 'g1_ctl', side: 'right', type: 'bidirectional', label: '控制' }
       ]},
       { id: 'gen_2', row: 4, x: 760, width: 140, height: 50, label: '柴油发电机-2', class: 'module-right', ports: [
         { id: 'g2_fuel', side: 'top', type: 'input', label: '燃油' },
-        { id: 'g2_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g2_out', side: 'bottom', type: 'output', label: '外部输出' },
         { id: 'g2_ctl', side: 'right', type: 'bidirectional', label: '控制' }
       ]},
       { id: 'gen_3', row: 4, x: 920, width: 140, height: 50, label: '柴油发电机-3', class: 'module-right', ports: [
         { id: 'g3_fuel', side: 'top', type: 'input', label: '燃油' },
-        { id: 'g3_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g3_out', side: 'bottom', type: 'output', label: '外部输出' },
         { id: 'g3_ctl', side: 'right', type: 'bidirectional', label: '控制' }
       ]},
       { id: 'gen_4', row: 4, x: 1080, width: 140, height: 50, label: '柴油发电机-4', class: 'module-right', ports: [
         { id: 'g4_fuel', side: 'top', type: 'input', label: '燃油' },
-        { id: 'g4_pwr', side: 'left', type: 'output', label: '电能' },
+        { id: 'g4_out', side: 'bottom', type: 'output', label: '外部输出' },
         { id: 'g4_ctl', side: 'right', type: 'bidirectional', label: '控制' }
       ]},
       { id: 'aux_gen', row: 4, x: 1240, width: 110, height: 50, label: '辅助发电', class: 'module-right', ports: [
-        { id: 'aux_pwr', side: 'left', type: 'output', label: '辅助电' },
-        { id: 'aux_ctl', side: 'right', type: 'bidirectional', label: '控制' }
+        { id: 'aux_ctl_in', side: 'left', type: 'input', label: '控制' },
+        { id: 'aux_ctl_out', side: 'right', type: 'bidirectional', label: '控制' }
       ]},
       
       // 第5行：配电系统（一行，与第1行同宽）
-    { id: 'power_main2', row: 5, x: 50, width: 1300, height: 50, label: '配电系统', class: 'module-top', ports: [
-        { id: 'p_main2_out1', side: 'bottom', type: 'output', label: '电能输出1' },
-        { id: 'p_main2_out2', side: 'bottom', type: 'output', label: '电能输出2' },
-        { id: 'p_main2_out3', side: 'bottom', type: 'output', label: '电能输出3' },
-        { id: 'p_main2_in1', side: 'top', type: 'input', label: '外部输入' }
+      { id: 'power_main2', row: 5, x: 50, width: 1300, height: 50, label: '配电系统', class: 'module-top', ports: [
+        { id: 'p_main2_out1', side: 'bottom', type: 'output', label: '电能输出1', offsetX: -300 },
+        { id: 'p_main2_out2', side: 'bottom', type: 'output', label: '电能输出2', offsetX: -150 },
+        { id: 'p_main2_out3', side: 'bottom', type: 'output', label: '电能输出3', offsetX: 0 },
+        { id: 'p_main2_out4', side: 'bottom', type: 'output', label: '电能输出4', offsetX: 150 },
+        { id: 'p_main2_out5', side: 'bottom', type: 'output', label: '电能输出5', offsetX: 300 },
+        { id: 'p_main2_in1', side: 'top', type: 'input', label: '外部输入', offsetX: 0 }
+      ]},
+      
+      // 第6行：底部外部输出节点（宽高为0，只有端口）
+      { id: 'external_bottom_nodes', row: 6, x: 0, width: 1, height: 1, label: '', class: 'module-external', ports: [
+        { id: 'external_bottom1', side: 'top', type: 'output', label: '外部输出1', offsetX: -35 },
+        { id: 'external_bottom2', side: 'top', type: 'output', label: '外部输出2', offsetX: 125 },
+        { id: 'external_bottom3', side: 'top', type: 'output', label: '外部输出3', offsetX: 285 },
+        { id: 'external_bottom4', side: 'top', type: 'output', label: '外部输出4', offsetX: 445 },
+        { id: 'external_bottom5', side: 'top', type: 'input', label: '外部输入', offsetX: 0 },
+        { id: 'external_bottom6', side: 'top', type: 'output', label: '电能输出', offsetX: -300 }
+      ]},
+      
+      // 右侧外部节点（宽高为0，只有端口）
+      { id: 'external_right_node', row: 4, x: 1400, width: 0, height: 0, label: '', class: 'module-external', ports: [
+        { id: 'external_right', side: 'left', type: 'bidirectional', label: '控制', offsetY: 0 }
       ]},
     ];
     
     // 连接定义
     const CONNECTIONS = [
-      // 顶部到对称区域 - 电能流
-      { from: 'p_main_out1', to: 'pl_prop_pwr', type: 'energy', label: '推进电能' },
-      { from: 'p_main_out2', to: 'pr_prop_pwr', type: 'energy', label: '推进电能' },
-      { from: 'p_main_out3', to: 'lc_in', type: 'energy', label: '主电能' },
+      // 外部输入到动力电力保障系统
+      { from: 'external_top', to: 'p_main_in1', type: 'energy', label: '外部输入' },
+      
+      // 动力电力保障系统到推进系统
+      { from: 'p_main_out1', to: 'pl_prop_pwr', type: 'energy', label: '电能' },
+      { from: 'p_main_out2', to: 'pr_prop_pwr', type: 'energy', label: '电能' },
       
       // 左舷系统内部连接
       { from: 'pl_prop_out', to: 'pl_gear_in', type: 'energy', label: '' },
       { from: 'pl_gear_out', to: 'pl_shaft_in', type: 'energy', label: '' },
       { from: 'pl_shaft_out', to: 'pl_rudder_in', type: 'energy', label: '' },
+      { from: 'pl_prop_pwr', to: 'p_main_out1', type: 'energy', label: '' },
       
       // 右舷系统内部连接
       { from: 'pr_prop_out', to: 'pr_gear_in', type: 'energy', label: '' },
       { from: 'pr_gear_out', to: 'pr_shaft_in', type: 'energy', label: '' },
       { from: 'pr_shaft_out', to: 'pr_rudder_in', type: 'energy', label: '' },
+      { from: 'pr_prop_pwr', to: 'p_main_out2', type: 'energy', label: '' },
+      
+      // 发电系统燃油输入
+      { from: 'p_main_out3', to: 'g1_fuel', type: 'energy', label: '燃油' },
+      { from: 'p_main_out4', to: 'g2_fuel', type: 'energy', label: '燃油' },
+      { from: 'p_main_out5', to: 'g3_fuel', type: 'energy', label: '燃油' },
+      
+      // 发电系统之间连接
+      { from: 'g1_ctl', to: 'g2_ctl', type: 'signal', label: '' },
+      { from: 'g2_ctl', to: 'g3_ctl', type: 'signal', label: '' },
+      { from: 'g3_ctl', to: 'g4_ctl', type: 'signal', label: '' },
+      { from: 'g4_ctl', to: 'aux_ctl_in', type: 'signal', label: '' },
+      
+      // 发电系统外部输出
+      { from: 'g1_out', to: 'external_bottom1', type: 'energy', label: '外部输出' },
+      { from: 'g2_out', to: 'external_bottom2', type: 'energy', label: '外部输出' },
+      { from: 'g3_out', to: 'external_bottom3', type: 'energy', label: '外部输出' },
+      { from: 'g4_out', to: 'external_bottom4', type: 'energy', label: '外部输出' },
+      { from: 'aux_ctl_out', to: 'external_right', type: 'signal', label: '控制' },
+      
+      // 配电系统连接
+      { from: 'external_bottom5', to: 'p_main2_in1', type: 'energy', label: '外部输入' },
+      { from: 'p_main2_out1', to: 'external_bottom6', type: 'energy', label: '电能输出' },
     ];
     
     let showLabels = true;
@@ -351,23 +384,39 @@
       window.edgesSvg = svg;
       portPositions = {};
       
-      // 绘制行标签
-      Object.keys(LAYOUT).forEach(key => {
-        const row = LAYOUT[key];
-        const labelEl = document.createElement('div');
-        labelEl.className = 'region-label';
-        labelEl.textContent = row.label;
-        labelEl.style.left = '10px';
-        labelEl.style.top = (row.y - 15) + 'px';
-        canvas.appendChild(labelEl);
-      });
+
+      // 绘制外部节点（宽高为0的虚拟节点，只有端口）
+      // 注意：外部节点已经包含在 MODULES 中，会统一渲染
       
       // 绘制模块和端口
       MODULES.forEach(mod => {
         // 根据行计算Y坐标
         const row = LAYOUT['row' + mod.row];
-        const absX = mod.x;
-        const absY = row.y + (row.height - mod.height) / 2;
+        let absX = mod.x;
+        let absY = row.y + (row.height - mod.height) / 2;
+        
+        // 外部节点（宽高为0）特殊处理：确保端口贴合边框
+        const isExternal = mod.width === 0 && mod.height === 0;
+        if (isExternal) {
+          // 根据端口方向调整节点位置，使端口刚好在边框上
+          if (mod.ports && mod.ports.length > 0) {
+            const firstPort = mod.ports[0];
+            switch(firstPort.side) {
+              case 'top':
+                absY = 0; // 顶部边框
+                break;
+              case 'bottom':
+                absY = CANVAS_HEIGHT; // 底部边框
+                break;
+              case 'left':
+                absX = 0; // 左侧边框
+                break;
+              case 'right':
+                absX = CANVAS_WIDTH; // 右侧边框
+                break;
+            }
+          }
+        }
         
         // 模块
         const modEl = document.createElement('div');
@@ -389,23 +438,27 @@
             
             let portX = absX;
             let portY = absY;
+            
+            // 处理端口偏移量
+            const offsetX = port.offsetX || 0;
+            const offsetY = port.offsetY || 0;
                     
             switch(port.side) {
               case 'top':
-                portX += mod.width / 2 - 5;
-                portY -= 5;
+                portX += mod.width / 2 - 5 + offsetX;
+                portY -= 5 + offsetY;
                 break;
               case 'bottom':
-                portX += mod.width / 2 - 5;
-                portY += mod.height - 5;
+                portX += mod.width / 2 - 5 + offsetX;
+                portY += mod.height - 5 + offsetY;
                 break;
               case 'left':
-                portX -= 5;
-                portY += mod.height / 2 - 5;
+                portX -= 5 + offsetX;
+                portY += mod.height / 2 - 5 + offsetY;
                 break;
               case 'right':
-                portX += mod.width - 5;
-                portY += mod.height / 2 - 5;
+                portX += mod.width - 5 + offsetX;
+                portY += mod.height / 2 - 5 + offsetY;
                 break;
             }
                     
