@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>ELKJS 四层布局</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      font-family: Arial, sans-serif;
+    }
+    #canvas {
+      border: 1px solid #ccc;
+      position: relative;
+      width: 800px;
+      height: 500px;
+      background: #f9f9f9;
+    }
+    .node {
+      position: absolute;
+      background: #4CAF50;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      font-size: 14px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+      font-weight: bold;
+    }
+    svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+    }
+    .edge {
+      stroke: #666;
+      stroke-width: 2;
+      fill: none;
+    }
+    .info {
+      margin-top: 20px;
+      padding: 15px;
+      background: #e3f2fd;
+      border-radius: 4px;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <h2>ELKJS 四层布局演示</h2>
+  <div id="canvas">
+    <svg id="edges"></svg>
+  </div>
+  <div class="info">
+    <strong>布局说明：</strong><br>
+    第一层：单个节点，宽度占 80% (640px)，居中对齐<br>
+    第二层：两个节点，每个宽度 100px，靠左布局<br>
+    第三层：两个节点，每个宽度 100px，靠右布局<br>
+    第四层：单个节点，宽度占 80% (640px)，居中对齐
+  </div>
+
+  <script src="https://unpkg.com/elkjs@0.8.2/lib/elk.bundled.js"></script>
+  <script>
+    window.addEventListener('load', function() {
+      const ELK = window.ELK;
+      const elk = new ELK();
+
+      const canvasWidth = 800;
+      const canvasHeight = 500;
+      const wideNodeWidth = canvasWidth * 0.8;
+      const nodeHeight = 50;
+      const smallNodeWidth = 100;
+      const layerSpacing = 100;
+      const nodeSpacing = 20;
+
+      const graph = {
+        id: "root",
+        layoutOptions: {
+          "elk.algorithm": "layered",
+          "elk.direction": "DOWN",
+          "elk.spacing.nodeNode": nodeSpacing,
+          "elk.layered.spacing.nodeNodeBetweenLayers": layerSpacing
+        },
+        
+        children: [
+          {
+            id: "layer1_node1",
+            width: wideNodeWidth,
+            height: nodeHeight
+          },
+          {
+            id: "layer2_node1",
+            width: smallNodeWidth,
+            height: nodeHeight
+          },
+          {
+            id: "layer2_node2",
+            width: smallNodeWidth,
+            height: nodeHeight
+          },
+          {
+            id: "layer3_node1",
+            width: smallNodeWidth,
+            height: nodeHeight
+          },
+          {
+            id: "layer3_node2",
+            width: smallNodeWidth,
+            height: nodeHeight
+          },
+          {
+            id: "layer4_node1",
+            width: wideNodeWidth,
+            height: nodeHeight
+          }
+        ],
+        
+        edges: [
+          { id: "e1", sources: ["layer1_node1"], targets: ["layer2_node1"] },
+          { id: "e2", sources: ["layer1_node1"], targets: ["layer2_node2"] },
+          { id: "e3", sources: ["layer2_node1"], targets: ["layer3_node1"] },
+          { id: "e4", sources: ["layer2_node2"], targets: ["layer3_node2"] },
+          { id: "e5", sources: ["layer3_node1"], targets: ["layer4_node1"] },
+          { id: "e6", sources: ["layer3_node2"], targets: ["layer4_node1"] }
+        ]
+      };
+
+      elk.layout(graph).then((result) => {
+        console.log("ELK 布局结果:", result);
+        
+        const canvas = document.getElementById('canvas');
+        const nodePositions = {};
+        
+        result.children.forEach(n => {
+          const layer = parseInt(n.id.split('_')[0].replace('layer', ''));
+          const nodeIndex = parseInt(n.id.split('_')[1].replace('node', '')) - 1;
+          
+          let x, y;
+          y = 30 + (layer - 1) * layerSpacing;
+          
+          if (layer === 1 || layer === 4) {
+            x = (canvasWidth - wideNodeWidth) / 2;
+          } else if (layer === 2) {
+            x = (canvasWidth - wideNodeWidth) / 2 + nodeIndex * (smallNodeWidth + nodeSpacing);
+          } else if (layer === 3) {
+            const totalWidth = 2 * smallNodeWidth + nodeSpacing;
+            x = (canvasWidth + wideNodeWidth) / 2 - totalWidth + nodeIndex * (smallNodeWidth + nodeSpacing);
+          }
+          
+          nodePositions[n.id] = { x, y, width: n.width, height: n.height };
+          
+          const nodeEl = document.createElement('div');
+          nodeEl.className = 'node';
+          nodeEl.id = n.id;
+          nodeEl.style.left = x + 'px';
+          nodeEl.style.top = y + 'px';
+          nodeEl.style.width = n.width + 'px';
+          nodeEl.style.height = n.height + 'px';
+          nodeEl.textContent = n.id;
+          canvas.appendChild(nodeEl);
+        });
+        
+        const svg = document.getElementById('edges');
+        result.edges.forEach(e => {
+          const sourceId = e.sources[0];
+          const targetId = e.targets[0];
+          const source = nodePositions[sourceId];
+          const target = nodePositions[targetId];
+          
+          const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+          path.setAttribute('class', 'edge');
+          
+          const startX = source.x + source.width / 2;
+          const startY = source.y + source.height;
+          const endX = target.x + target.width / 2;
+          const endY = target.y;
+          
+          const midY = (startY + endY) / 2;
+          const d = `M${startX} ${startY} L${startX} ${midY} L${endX} ${midY} L${endX} ${endY}`;
+          
+          path.setAttribute('d', d);
+          svg.appendChild(path);
+        });
+      }).catch(err => {
+        console.error('布局失败:', err);
+      });
+    });
+  </script>
+</body>
+</html>

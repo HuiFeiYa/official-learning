@@ -113,6 +113,18 @@
             { id: "p3_in", width: 15, height: 10 },    // 输入端口
             { id: "p3_out", width: 30, height: 10 }    // 输出端口
           ]
+        },
+        {
+          id: "n4", width: 100, height: 40
+        },
+        {
+          id: "n5", width: 100, height: 40
+        },
+        {
+          id: "n6", width: 100, height: 40
+        },
+        {
+          id: "n7", width: 100, height: 40
         }
       ],
       
@@ -122,8 +134,9 @@
       edges: [
         { id: "e1", sources: ["n1"], targets: ["n2"] },           // 节点到节点
         { id: "e2", sources: ["n2"], targets: ["p3_in"] },        // 节点到端口
-        { id: "e3", sources: ["p3_out"], targets: ["n1"] }        // 端口到节点
-        // { id: 'e4', sources: ['n1'], targets: ['n2'] }
+        { id: "e3", sources: ["p3_out"], targets: ["n1"] },        // 端口到节点
+        { id: "e4", sources: ["n4"], targets: ["n5"] },           // 节点到节点
+        {id: "e6", sources: ["n6"], targets: ["n7"]},           // 节点到节点
       ]
     };
 
