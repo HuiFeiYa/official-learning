@@ -226,7 +226,7 @@
       
       // 第2行：左舷推进系统
       {
-        id: "external_left_node", row: 2, x: 0, width: 1, height: 1, label: '', class: 'module-external', ports: [
+        id: "external_left_node", row: 2, x: 0, width: 2, height: 2, label: '', class: 'module-external', ports: [
           { id: 'external_left', side: 'right', type: 'input', label: '', offsetX: 0 }
         ]
       },
@@ -250,7 +250,7 @@
       
       // 第3行：右舷推进系统（与左舷X轴对称）
          {
-        id: "external_left_node1", row: 3, x: 0, width: 1, height: 1, label: '', class: 'module-external', ports: [
+        id: "external_left_node1", row: 3, x: 0, width: 2, height: 2, label: '', class: 'module-external', ports: [
           { id: 'external_left1', side: 'right', type: 'input', label: '', offsetX: 0 }
         ]
       },
@@ -329,6 +329,10 @@
       // 外部输入到动力电力保障系统
       { from: 'external_top', to: 'p_main_in1', type: 'energy', label: '外部输入' },
       
+      // 左侧外部节点到推进系统
+      { from: 'external_left', to: 'pl_prop_in', type: 'energy', label: '机械能输入' },
+      { from: 'external_left1', to: 'pr_prop_in', type: 'energy', label: '机械能输入' },
+      
       // 动力电力保障系统到推进系统
       { from: 'p_main_out1', to: 'pl_prop_pwr', type: 'energy', label: '电能' },
       { from: 'p_main_out2', to: 'pr_prop_pwr', type: 'energy', label: '电能' },
@@ -395,8 +399,8 @@
         let absX = mod.x;
         let absY = row.y + (row.height - mod.height) / 2;
         
-        // 外部节点（宽高为0）特殊处理：确保端口贴合边框
-        const isExternal = mod.width === 0 && mod.height === 0;
+        // 外部节点（宽高为0或1）特殊处理：确保端口贴合边框
+        const isExternal = mod.width <= 1 && mod.height <= 1;
         if (isExternal) {
           // 根据端口方向调整节点位置，使端口刚好在边框上
           if (mod.ports && mod.ports.length > 0) {
@@ -590,8 +594,8 @@
         })),
         edges: CONNECTIONS.map((c, i) => ({
           id: `e${i}`,
-          sources: [c.from.split('_')[0]],
-          targets: [c.to.split('_')[0]]
+          sources: [c.from],
+          targets: [c.to]
         }))
       };
     }

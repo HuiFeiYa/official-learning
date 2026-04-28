@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>AI 流式输出模拟</title>
+  <style>
+    body { font-size: 18px; padding: 20px; }
+    .result { border: 1px solid #ccc; padding: 15px; margin-top: 15px; min-height: 100px; }
+  </style>
+</head>
+<body>
+  <h3>AI 回答：</h3>
+  <div class="result" id="result"></div>
+
+  <script>
+    // ==========================================
+    // 【最简单版本】最容易理解！你就用这个理解 stream
+    // ==========================================
+    async function simpleStreamDemo() {
+      const resultEl = document.getElementById('result');
+
+      // 1. 模拟模型返回的 异步可迭代流 stream
+      const stream = createSimpleStream();
+
+      // 2. 你最关心的写法：逐段读取流
+      // 这就是你代码里的写法
+      for await (const chunk of stream) {
+        // 一段一段输出
+        resultEl.innerText += chunk.text;
+      }
+    }
+
+    // 模拟一个最简单的异步流
+    async function* createSimpleStream() {
+      // 模拟AI一段一段吐字
+      const chunks = [
+        { text: "Parrots" },
+        { text: " have " },
+        { text: "colorful " },
+        { text: "feathers " },
+        { text: "to attract mates!" }
+      ];
+
+      for (const chunk of chunks) {
+        await new Promise(r => setTimeout(r, 300)); // 延迟模拟
+        yield chunk; // 抛出一段数据
+      }
+    }
+
+    // ==========================================
+    // 【完整版】模拟真实 SSE + 底层网络流（你给的逻辑）
+    // ==========================================
+    function mockNetworkStream() {
+      const rawSSEData = [
+        'data: {"choices":[{"delta":{"content":"Parrots"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":" have"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":" colorful"}}]}\n\n',
+        'data: {"choices":[{"delta":{"content":" feathers!"}}]}\n\n',
+        'data: [DONE]\n\n'
+      ];
+
+      let index = 0;
+      return {
+        async read() {
+          if (index >= rawSSEData.length) return { done: true };
+          await new Promise(r => setTimeout(r, 200));
+          const value = rawSSEData[index++];
+          return { done: false, value };
+        }
+      };
+    }
+
+    async function* realLangChainStream() {
+      const networkReader = mockNetworkStream();
+
+      while (true) {
+        const { done, value } = await networkReader.read();
+        if (done) break;
+
+        if (value.startsWith('data: [DONE]')) break;
+
+        if (value.startsWith('data: ')) {
+          const jsonStr = value.replace('data: ', '').trim();
+          const parsed = JSON.parse(jsonStr);
+          const text = parsed.choices[0].delta.content;
+          if (text) yield { text };
+        }
+      }
+    }
+
+    // ==========================================
+    // 运行！你可以切换两个版本看效果
+    // ==========================================
+    // 简单版（推荐理解）
+    simpleStreamDemo();
+
+    // 真实底层版（和大模型返回一样）
+    // realStreamDemo();
+    async function realStreamDemo() {
+      const resultEl = document.getElementById('result');
+      const stream = realLangChainStream();
+      for await (const chunk of stream) {
+        resultEl.innerText += chunk.text;
+      }
+    }
+  </script>
+</body>
+</html>
